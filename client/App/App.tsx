@@ -1,9 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import Http from '@mortvola/http';
+import { DropdownButton, Dropdown } from 'react-bootstrap';
 import Map from '../Map/Map';
 import styles from './App.module.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { useGarminFeedSettings } from './GarminFeedSettings';
 
 type PropsType = {
   username: string,
@@ -11,21 +13,39 @@ type PropsType = {
 }
 
 const App: React.FC<PropsType> = ({ username, mapApiKey }) => {
-  const handleLogoutClick = async () => {
-    const response = await Http.post('/logout');
+  const [Settings, showSettings] = useGarminFeedSettings();
 
-    if (response.ok) {
-      window.location.replace('/');
+  const handleSelect = async (event: string | null) => {
+    switch (event) {
+      case 'LOGOUT': {
+        const response = await Http.post('/logout');
+
+        if (response.ok) {
+          window.location.replace('/');
+        }
+
+        break;
+      }
+
+      case 'SETTINGS':
+        showSettings();
+        break;
+
+      default:
+        break;
     }
   };
 
   return (
     <div className={styles.layout}>
       <div className={styles.toolbar}>
-        <div>{username}</div>
-        <button type="button" onClick={handleLogoutClick}>Logout</button>
+        <DropdownButton title={username} onSelect={handleSelect}>
+          <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
+          <Dropdown.Item eventKey="LOGOUT">Logout</Dropdown.Item>
+        </DropdownButton>
       </div>
       <Map apiKey={mapApiKey} showLocation />
+      <Settings />
     </div>
   );
 };

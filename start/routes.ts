@@ -54,7 +54,12 @@ Route.post('/password/update', 'UsersController.updatePassword').as('updatePassw
 Route.post('/password/change', 'UsersController.changePassword');
 
 Route.group(() => {
-  Route.get('/location', 'UsersController.getLocation')
+  Route.group(() => {
+    Route.get('/feed', 'UsersController.getFeed');
+    Route.put('/feed', 'UsersController.setFeed');
+    Route.get('/location', 'UsersController.getLocation');
+    Route.post('/feed-test', 'UsersController.feedTest');
+  })
     .middleware('auth');
 
   Route.get('/trail/:name', 'TrailsController.get');

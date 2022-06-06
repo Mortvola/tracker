@@ -27,8 +27,11 @@ export default class User extends BaseModel {
   @column()
   public activated: boolean;
 
-  @column()
+  @column({ serializeAs: 'gpsFeed' })
   public gpsFeed: string | null;
+
+  @column({ serializeAs: 'feedPassword' })
+  public feedPassword: string | null;
 
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime;

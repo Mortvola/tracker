@@ -10,6 +10,8 @@ import { Exception } from '@adonisjs/core/build/standalone';
 import fetch from 'node-fetch';
 import { parseStringPromise } from 'xml2js';
 
+type GarminErrorResponse = { status: number, statusText: string };
+
 export default class UsersController {
   public async register({ request, response }: HttpContextContract) : Promise<string> {
     /**
@@ -144,25 +146,114 @@ export default class UsersController {
     auth.logout();
   }
 
-  public async getLocation({ auth: { user } }: HttpContextContract): Promise<number[] | void> {
-    if (!user || user.gpsFeed === null) {
-      throw new Exception('No gps feed set');
-    }
-
+  private async sendLocationRequest(
+    feed: string,
+    password: string | null,
+  ): Promise<number[] | GarminErrorResponse> {
     const garminFeed = 'https://share.garmin.com/Feed/Share';
 
+    let headers: Record<string, string> | undefined;
+
+    if (password !== '' && password !== null) {
+      headers = {
+        Authorization: `Basic ${Buffer.from(`:${password}`).toString('base64')}`,
+        Accept: 'application/xhtml+xml,application/xml',
+      };
+    }
+    else {
+      headers = {
+        Accept: 'application/xhtml+xml,application/xml',
+      };
+    }
+
     const response = await fetch(
-      `${garminFeed}/${user.gpsFeed}`);
+      `${garminFeed}/${feed}`,
+      {
+        headers,
+      },
+    );
 
     if (response.ok) {
       const body = await response.text();
 
-      const d = await parseStringPromise(body);
+      try {
+        const d = await parseStringPromise(body);
 
-      const point: string = d.kml.Document[0].Folder[0].Placemark[0].Point[0].coordinates[0];
-      return point.split(',').map((s) => parseFloat(s));
+        if (d) {
+          const point: string = d.kml.Document[0].Folder[0].Placemark[0].Point[0].coordinates[0];
+          return point.split(',').map((s) => parseFloat(s));
+        }
+      }
+      catch (error) {
+        console.log(error);
+      }
+
+      return [];
     }
 
-    throw new Exception('invalid response from Garmin');
+    return {
+      status: response.status,
+      statusText: response.statusText,
+    };
+  }
+
+  public async getLocation({
+    auth: {
+      user,
+    },
+  }: HttpContextContract): Promise<number[] | GarminErrorResponse> {
+    if (!user || user.gpsFeed === null) {
+      throw new Exception('No gps feed set');
+    }
+
+    return this.sendLocationRequest(user.gpsFeed, user.feedPassword);
+  }
+
+  public async feedTest({ request }): Promise<number[] | GarminErrorResponse> {
+    const credentials = await request.validate({
+      schema: schema.create({
+        feed: schema.string([rules.trim()]),
+        password: schema.string.optional([rules.trim()]),
+      }),
+      messages: {
+        'feed.required': 'A Garmin MapShare URL is required',
+      },
+    });
+
+    return this.sendLocationRequest(credentials.feed, credentials.password);
+  }
+
+  public async setFeed({ auth: { user }, request }: HttpContextContract): Promise<void> {
+    if (!user) {
+      throw new Exception('user is not set');
+    }
+
+    const credentials = await request.validate({
+      schema: schema.create({
+        feed: schema.string.optional([rules.trim()]),
+        password: schema.string.optional([rules.trim()]),
+      }),
+    });
+
+    user.gpsFeed = credentials.feed ?? null;
+    user.feedPassword = credentials.password ?? null;
+
+    user.save();
+  }
+
+  public async getFeed({
+    auth: {
+      user,
+    },
+  }: HttpContextContract): Promise<{ gpsFeed: string, feedPassword: string }> {
+    if (!user) {
+      throw new Exception('user is not set');
+    }
+
+    return user.serialize({
+      fields: {
+        pick: ['gpsFeed', 'feedPassword'],
+      },
+    }) as { gpsFeed: string, feedPassword: string };
   }
 }
