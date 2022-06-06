@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import {
   GoogleMap, HeatmapLayer, Marker, Polyline, useJsApiLoader,
 } from '@react-google-maps/api';
+import Http from '@mortvola/http';
 
 const containerStyle = {
   width: '100%',
@@ -30,6 +31,7 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
   const [, setMap] = React.useState<google.maps.Map | null>(null);
   const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
+  const [heatmap, setHeatmap] = React.useState<google.maps.LatLng[]>([]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -55,6 +57,18 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
 
           setTrail(body.map((p) => (
             p.map((c) => ({ lat: c[1], lng: c[0] }))
+          )));
+        }
+      })();
+
+      (async () => {
+        const response = await Http.get<[number, number][]>('/api/heatmap');
+
+        if (response.ok) {
+          const body = await response.json();
+
+          setHeatmap(body.map((p) => (
+            new google.maps.LatLng(p[1], p[0])
           )));
         }
       })();
@@ -97,22 +111,7 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
             : null
         }
         <HeatmapLayer
-          data={[
-            new google.maps.LatLng(37.782, -122.447),
-            new google.maps.LatLng(37.782, -122.445),
-            new google.maps.LatLng(37.782, -122.443),
-            new google.maps.LatLng(37.782, -122.441),
-            new google.maps.LatLng(37.782, -122.439),
-            new google.maps.LatLng(37.782, -122.437),
-            new google.maps.LatLng(37.782, -122.435),
-            new google.maps.LatLng(37.785, -122.447),
-            new google.maps.LatLng(37.785, -122.445),
-            new google.maps.LatLng(37.785, -122.443),
-            new google.maps.LatLng(37.785, -122.441),
-            new google.maps.LatLng(37.785, -122.439),
-            new google.maps.LatLng(37.785, -122.437),
-            new google.maps.LatLng(37.785, -122.435),
-          ]}
+          data={heatmap}
         />
       </GoogleMap>
     );

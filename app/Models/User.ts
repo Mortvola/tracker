@@ -69,10 +69,23 @@ export default class User extends BaseModel {
     return `${Env.get('APP_URL') as string}/verify-email/${token}/${this.id}`;
   }
 
-  public async updateLocation() {
-    if (this.gpsFeed) {
-      User.sendLocationRequest(this.gpsFeed, this.feedPassword);
+  public async getLocation(): Promise<[number, number] | null> {
+    try {
+      if (this.gpsFeed) {
+        const result = await User.sendLocationRequest(this.gpsFeed, this.feedPassword);
+
+        if (Array.isArray(result)) {
+          const location: [number, number] = [result[0], result[1]];
+
+          return location;
+        }
+      }
     }
+    catch (error) {
+      console.log(error);
+    }
+
+    return null;
   }
 
   public static async sendLocationRequest(

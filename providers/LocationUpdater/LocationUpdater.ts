@@ -1,5 +1,4 @@
 /* eslint-disable class-methods-use-this */
-import User from 'App/Models/User';
 import { CronJob } from 'cron';
 
 class LocationUpdater {
@@ -15,55 +14,26 @@ class LocationUpdater {
   }
 
   async updateLocations() {
+    const { default: User } = await import('App/Models/User');
+    const { default: Heatmap } = await import('App/Models/Heatmap');
     console.log('update locations');
 
     const users = await User.all();
+    const points: [number, number][] = [];
 
-    users.forEach((u) => {
-      u.updateLocation();
-    });
-    // const { default: Institution } = await import('App/Models/Institution');
-    // const { default: Database } = await import('@ioc:Adonis/Lucid/Database');
-    // const { default: plaidClient } = await import('@ioc:Plaid');
-    // const { default: Logger } = await import('@ioc:Adonis/Core/Logger');
+    await Promise.all(users.map(async (u) => {
+      const result = await u.getLocation();
 
-    // Logger.info('Checking balances');
+      if (result !== null) {
+        points.push(result);
+      }
+    }));
 
-    // const trx = await Database.transaction();
+    const heatmap = new Heatmap();
 
-    // try {
-    //   const institutions = await Institution.query({ client: trx })
-    //     .whereNotNull('accessToken')
-    //     .andWhereHas('accounts', (accountsQuery) => {
-    //       accountsQuery.where('tracking', 'Balances').andWhere('closed', false);
-    //     })
-    //     .preload('accounts', (accountsQuery) => {
-    //       accountsQuery.where('tracking', 'Balances');
-    //     });
+    heatmap.points = JSON.stringify(points);
 
-    //   await Promise.all(institutions.map(async (institution) => {
-    //     if (institution.accessToken !== null) {
-    //       Logger.info(`Checking accounts at ${institution.name}`);
-    //       const response = await plaidClient.getAccounts(institution.accessToken, {
-    //         account_ids: institution.accounts.map((a) => a.plaidAccountId),
-    //       });
-
-    //       await Promise.all(institution.accounts.map(async (account) => {
-    //         const plaidAccount = response.accounts.find((a) => a.account_id === account.plaidAccountId);
-    //         if (plaidAccount && plaidAccount.balances.current !== null) {
-    //           await account.updateAccountBalanceHistory(plaidAccount.balances.current);
-    //         }
-    //       }));
-    //     }
-    //   }));
-
-    //   trx.commit();
-    // }
-    // catch (error) {
-    //   console.log(error);
-    //   // Logger.error(error, 'balance update failed');
-    //   // await trx.rollback();
-    // }
+    heatmap.save();
   }
 }
 

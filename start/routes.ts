@@ -63,5 +63,6 @@ Route.group(() => {
     .middleware('auth');
 
   Route.get('/trail/:name', 'TrailsController.get');
+  Route.get('/heatmap', 'HeatmapsController.get');
 })
   .prefix('/api');
