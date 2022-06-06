@@ -4,6 +4,10 @@ import { column, beforeSave, BaseModel } from '@ioc:Adonis/Lucid/Orm';
 import Env from '@ioc:Adonis/Core/Env';
 import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
+import fetch from 'node-fetch';
+import { parseStringPromise } from 'xml2js';
+
+type GarminErrorResponse = { status: number, statusText: string };
 
 export default class User extends BaseModel {
   @column({ isPrimary: true })
@@ -63,5 +67,62 @@ export default class User extends BaseModel {
     const token = this.generateToken();
 
     return `${Env.get('APP_URL') as string}/verify-email/${token}/${this.id}`;
+  }
+
+  public async updateLocation() {
+    if (this.gpsFeed) {
+      User.sendLocationRequest(this.gpsFeed, this.feedPassword);
+    }
+  }
+
+  public static async sendLocationRequest(
+    feed: string,
+    password: string | null,
+  ): Promise<number[] | GarminErrorResponse> {
+    const garminFeed = 'https://share.garmin.com/Feed/Share';
+
+    let headers: Record<string, string> | undefined;
+
+    if (password !== '' && password !== null) {
+      headers = {
+        Authorization: `Basic ${Buffer.from(`:${password}`).toString('base64')}`,
+        Accept: 'application/xhtml+xml,application/xml',
+      };
+    }
+    else {
+      headers = {
+        Accept: 'application/xhtml+xml,application/xml',
+      };
+    }
+
+    const response = await fetch(
+      `${garminFeed}/${feed}`,
+      {
+        headers,
+      },
+    );
+
+    if (response.ok) {
+      const body = await response.text();
+
+      try {
+        const d = await parseStringPromise(body);
+
+        if (d) {
+          const point: string = d.kml.Document[0].Folder[0].Placemark[0].Point[0].coordinates[0];
+          return point.split(',').map((s) => parseFloat(s));
+        }
+      }
+      catch (error) {
+        console.log(error);
+      }
+
+      return [];
+    }
+
+    return {
+      status: response.status,
+      statusText: response.statusText,
+    };
   }
 }

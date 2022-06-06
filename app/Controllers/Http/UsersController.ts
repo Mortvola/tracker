@@ -7,8 +7,6 @@ import Mail from '@ioc:Adonis/Addons/Mail';
 import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import { Exception } from '@adonisjs/core/build/standalone';
-import fetch from 'node-fetch';
-import { parseStringPromise } from 'xml2js';
 
 type GarminErrorResponse = { status: number, statusText: string };
 
@@ -146,57 +144,6 @@ export default class UsersController {
     auth.logout();
   }
 
-  private async sendLocationRequest(
-    feed: string,
-    password: string | null,
-  ): Promise<number[] | GarminErrorResponse> {
-    const garminFeed = 'https://share.garmin.com/Feed/Share';
-
-    let headers: Record<string, string> | undefined;
-
-    if (password !== '' && password !== null) {
-      headers = {
-        Authorization: `Basic ${Buffer.from(`:${password}`).toString('base64')}`,
-        Accept: 'application/xhtml+xml,application/xml',
-      };
-    }
-    else {
-      headers = {
-        Accept: 'application/xhtml+xml,application/xml',
-      };
-    }
-
-    const response = await fetch(
-      `${garminFeed}/${feed}`,
-      {
-        headers,
-      },
-    );
-
-    if (response.ok) {
-      const body = await response.text();
-
-      try {
-        const d = await parseStringPromise(body);
-
-        if (d) {
-          const point: string = d.kml.Document[0].Folder[0].Placemark[0].Point[0].coordinates[0];
-          return point.split(',').map((s) => parseFloat(s));
-        }
-      }
-      catch (error) {
-        console.log(error);
-      }
-
-      return [];
-    }
-
-    return {
-      status: response.status,
-      statusText: response.statusText,
-    };
-  }
-
   public async getLocation({
     auth: {
       user,
@@ -206,10 +153,10 @@ export default class UsersController {
       throw new Exception('No gps feed set');
     }
 
-    return this.sendLocationRequest(user.gpsFeed, user.feedPassword);
+    return User.sendLocationRequest(user.gpsFeed, user.feedPassword);
   }
 
-  public async feedTest({ request }): Promise<number[] | GarminErrorResponse> {
+  public async feedTest({ request }: HttpContextContract): Promise<number[] | GarminErrorResponse> {
     const credentials = await request.validate({
       schema: schema.create({
         feed: schema.string([rules.trim()]),
@@ -220,7 +167,7 @@ export default class UsersController {
       },
     });
 
-    return this.sendLocationRequest(credentials.feed, credentials.password);
+    return User.sendLocationRequest(credentials.feed, credentials.password ?? null);
   }
 
   public async setFeed({ auth: { user }, request }: HttpContextContract): Promise<void> {
