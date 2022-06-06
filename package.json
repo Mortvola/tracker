@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "node ace serve --watch",
-    "build": "node ace build --production",
+    "server-build": "node ace build --production",
+    "app-build": "webpack --config-name app --env production",
+    "welcome-build": "webpack --config-name welcome --env production",
     "start": "node server.js",
     "dev-app-build": "webpack --config-name app",
     "dev-welcome-build": "webpack --config-name welcome",

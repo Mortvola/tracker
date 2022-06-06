@@ -27,7 +27,7 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
     libraries,
   });
 
-  const [map, setMap] = React.useState<google.maps.Map | null>(null);
+  const [, setMap] = React.useState<google.maps.Map | null>(null);
   const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
 

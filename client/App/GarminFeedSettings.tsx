@@ -129,7 +129,7 @@ const GarminFeedSettings: React.FC<ModalProps> = ({
     }
   };
 
-  const handleValidate = (values: ValueType) => {
+  const handleValidate = () => {
     const errors: FormikErrors<ValueType> = {};
 
     return errors;
