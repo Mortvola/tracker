@@ -1,5 +1,5 @@
 /* eslint-disable class-methods-use-this */
-import { BaseCommand, Exception, args } from '@adonisjs/core/build/standalone';
+import { BaseCommand, Exception, args, flags } from '@adonisjs/core/build/standalone';
 import Database from '@ioc:Adonis/Lucid/Database';
 import { parseStringPromise } from 'xml2js';
 
@@ -20,6 +20,9 @@ export default class LoadKml extends BaseCommand {
   @args.string({ description: 'The name of the trail' })
   public trail: string;
 
+  @flags.boolean({ alias: 'r', description: 'Replaces the existing data with new data' })
+  public replace: boolean;
+
   public static settings = {
     /**
      * Set the following value to true, if you want to load the application
@@ -38,6 +41,7 @@ export default class LoadKml extends BaseCommand {
 
   public async run() {
     const { default: Drive } = await import('@ioc:Adonis/Core/Drive');
+    const { default: Trail } = await import('App/Models/Trail');
 
     const buffer = await Drive.get(`./${this.kmlFile}`);
 
@@ -141,7 +145,6 @@ export default class LoadKml extends BaseCommand {
         const [segmentIndex, reverse] = findPrecedingSegment(newSegments, coordinates2);
 
         if (segmentIndex === -1) {
-          console.log('previous not found');
           break;
         }
 
@@ -156,7 +159,6 @@ export default class LoadKml extends BaseCommand {
         const [segmentIndex, reverse] = findFollowingSegment(newSegments, coordinates2);
 
         if (segmentIndex === -1) {
-          console.log('following not found');
           break;
         }
 
@@ -167,7 +169,6 @@ export default class LoadKml extends BaseCommand {
         coordinates2.splice(segmentIndex, 1);
       }
 
-      console.log(`newSegments.length = ${newSegments.length}`);
       segmentGroups = [
         ...segmentGroups.slice(),
         newSegments.flatMap((s) => s),
@@ -176,11 +177,28 @@ export default class LoadKml extends BaseCommand {
 
     await Drive.put('test.json', JSON.stringify(segmentGroups, null, 2));
 
-    await Database.insertQuery().table('trails').insert({
+    if (this.replace) {
+      const trail = await Trail.findBy('name', this.trail);
+
+      if (trail) {
+        trail.points = JSON.stringify(segmentGroups);
+
+        console.log('updating trail points');
+
+        trail.save();
+        return;
+      }
+    }
+
+    const trail = new Trail();
+
+    trail.fill({
       name: this.trail,
       points: JSON.stringify(segmentGroups),
     });
 
-    console.log('finished');
+    console.log('inserting trail points');
+
+    trail.save();
   }
 }

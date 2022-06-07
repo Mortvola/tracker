@@ -15,5 +15,5 @@ export default class Trail extends BaseModel {
   public name: string;
 
   @column()
-  public points: [number, number][][];
+  public points: [number, number][][] | string;
 }

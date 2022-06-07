@@ -25,7 +25,15 @@
         }
       ],
       "aliases": [],
-      "flags": []
+      "flags": [
+        {
+          "name": "replace",
+          "propertyName": "replace",
+          "type": "boolean",
+          "alias": "r",
+          "description": "Replaces the existing data with new data"
+        }
+      ]
     },
     "simulate": {
       "settings": {
