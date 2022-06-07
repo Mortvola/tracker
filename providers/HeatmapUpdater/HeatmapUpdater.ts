@@ -1,22 +1,20 @@
 /* eslint-disable class-methods-use-this */
 import { CronJob } from 'cron';
 
-class LocationUpdater {
+class HeatmapUpdater {
   cronJob: CronJob;
 
   intervalId: NodeJS.Timer;
 
   constructor() {
-    // this.cronJob = new CronJob('0 21 * * *', () => this.updateLocations());
-    // this.cronJob.start();
-
-    this.intervalId = setInterval(() => this.updateLocations(), 10000);
+    this.cronJob = new CronJob('0 1 * * *', () => this.updateLocations());
+    this.cronJob.start();
   }
 
   async updateLocations() {
     const { default: User } = await import('App/Models/User');
     const { default: Heatmap } = await import('App/Models/Heatmap');
-    console.log('update locations');
+    console.log('update heatmap');
 
     const users = await User.all();
     const points: [number, number][] = [];
@@ -37,4 +35,4 @@ class LocationUpdater {
   }
 }
 
-export default LocationUpdater;
+export default HeatmapUpdater;

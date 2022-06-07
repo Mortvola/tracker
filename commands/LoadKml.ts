@@ -81,9 +81,106 @@ export default class LoadKml extends BaseCommand {
       });
     });
 
+    const tolerance = 0.1;
+
+    const findPrecedingSegment = (
+      segments: [number, number][][],
+      candidates: [number, number][][],
+    ): [number, boolean] => {
+      const firstSegment = segments[0];
+      const firstPoint = firstSegment[0];
+
+      // Find segment before first segment
+      const index = candidates.findIndex((c) => (
+        (c[0][0] === firstPoint[0]
+          && c[0][1] === firstPoint[1])
+          || (c[c.length - 1][0] === firstPoint[0]
+            && c[c.length - 1][1] === firstPoint[1])
+      ));
+
+      if (index === -1) {
+        return [index, false];
+      }
+
+      const p = candidates[index][candidates[index].length - 1];
+
+      return [index, p[0] !== firstPoint[0] || p[1] !== firstPoint[1]];
+    };
+
+    const findFollowingSegment = (
+      segments: [number, number][][],
+      candidates: [number, number][][],
+    ): [number, boolean] => {
+      const lastSegment = segments[segments.length - 1];
+      const lastPoint = lastSegment[lastSegment.length - 1];
+
+      // Find segment after last segment
+      const index = candidates.findIndex((c) => (
+        (c[0][0] === lastPoint[0]
+          && c[0][1] === lastPoint[1])
+          || (c[c.length - 1][0] === lastPoint[0]
+            && c[c.length - 1][1] === lastPoint[1])
+      ));
+
+      if (index === -1) {
+        return [index, false];
+      }
+
+      const p = candidates[index][candidates[index].length - 1];
+
+      return [index, p[0] !== lastPoint[0] || p[1] !== lastPoint[1]];
+    };
+
+    let segmentGroups: [number, number][][] = [];
+
+    while (coordinates2.length !== 0) {
+      let newSegments: [number, number][][] = [coordinates2[0]];
+      coordinates2.splice(0, 1);
+
+      while (coordinates2.length !== 0) {
+        const [segmentIndex, reverse] = findPrecedingSegment(newSegments, coordinates2);
+
+        if (segmentIndex === -1) {
+          console.log('previous not found');
+          break;
+        }
+
+        newSegments = [
+          reverse ? coordinates2[segmentIndex].reverse() : coordinates2[segmentIndex],
+          ...newSegments.slice(),
+        ];
+        coordinates2.splice(segmentIndex, 1);
+      }
+
+      while (coordinates2.length !== 0) {
+        const [segmentIndex, reverse] = findFollowingSegment(newSegments, coordinates2);
+
+        if (segmentIndex === -1) {
+          console.log('following not found');
+          break;
+        }
+
+        newSegments = [
+          ...newSegments.slice(),
+          reverse ? coordinates2[segmentIndex].reverse() : coordinates2[segmentIndex],
+        ];
+        coordinates2.splice(segmentIndex, 1);
+      }
+
+      console.log(`newSegments.length = ${newSegments.length}`);
+      segmentGroups = [
+        ...segmentGroups.slice(),
+        newSegments.flatMap((s) => s),
+      ];
+    }
+
+    await Drive.put('test.json', JSON.stringify(segmentGroups, null, 2));
+
     await Database.insertQuery().table('trails').insert({
       name: this.trail,
-      points: JSON.stringify(coordinates2),
+      points: JSON.stringify(segmentGroups),
     });
+
+    console.log('finished');
   }
 }

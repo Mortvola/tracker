@@ -106,12 +106,19 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
         {
           trail
             ? (
-              trail.map((t, index) => <Polyline key={index} path={t} />)
+              trail.map((t, index) => (
+                <Polyline
+                  key={index}
+                  path={t}
+                  options={{ strokeWeight: 1 }}
+                />
+              ))
             )
             : null
         }
         <HeatmapLayer
           data={heatmap}
+          options={{ dissipating: true, opacity: 1 }}
         />
       </GoogleMap>
     );

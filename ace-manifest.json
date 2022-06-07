@@ -27,6 +27,26 @@
       "aliases": [],
       "flags": []
     },
+    "simulate": {
+      "settings": {
+        "loadApp": true,
+        "stayAlive": false
+      },
+      "commandPath": "./commands/Simulate",
+      "commandName": "simulate",
+      "description": "Simulates hikers for testing heatmap",
+      "args": [],
+      "aliases": [],
+      "flags": [
+        {
+          "name": "max-days",
+          "propertyName": "maxDays",
+          "type": "number",
+          "alias": "d",
+          "description": "Maximum number of days to run simulation"
+        }
+      ]
+    },
     "dump:rcfile": {
       "settings": {},
       "commandPath": "@adonisjs/core/build/commands/DumpRc",

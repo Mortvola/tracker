@@ -1,5 +1,5 @@
 import { ApplicationContract } from '@ioc:Adonis/Core/Application'
-import LocationUpdater from './LocationUpdater/LocationUpdater';
+import HeatmapUpdater from './HeatmapUpdater/HeatmapUpdater';
 
 export default class AppProvider {
   constructor(protected app: ApplicationContract) {}
@@ -8,8 +8,8 @@ export default class AppProvider {
     // Register your own bindings
 
     // Register the location updater binding.
-    this.app.container.singleton('LocationUpdater', () => (
-      new LocationUpdater()
+    this.app.container.singleton('HeatmapUpdater', () => (
+      new HeatmapUpdater()
     ));
   }
 
@@ -20,9 +20,9 @@ export default class AppProvider {
   public async ready() {
     // App is ready
 
-    // Importing the LocationUpdater will instantiate an instance
+    // Importing the HeatmapUpdater will instantiate an instance
     // which will start it running.
-    import('@ioc:LocationUpdater');
+    import('@ioc:HeatmapUpdater');
   }
 
   public async shutdown() {
