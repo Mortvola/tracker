@@ -1,6 +1,7 @@
 /* eslint-disable class-methods-use-this */
-import { BaseCommand, Exception, args, flags } from '@adonisjs/core/build/standalone';
-import Database from '@ioc:Adonis/Lucid/Database';
+import {
+  BaseCommand, Exception, args, flags,
+} from '@adonisjs/core/build/standalone';
 import { parseStringPromise } from 'xml2js';
 
 export default class LoadKml extends BaseCommand {
@@ -84,8 +85,6 @@ export default class LoadKml extends BaseCommand {
         return coord2;
       });
     });
-
-    const tolerance = 0.1;
 
     const findPrecedingSegment = (
       segments: [number, number][][],

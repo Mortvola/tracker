@@ -130,6 +130,10 @@ export default class Simulate extends BaseCommand {
       let longestSegment: [number, number][] | undefined;
       let longestLength: number | undefined;
 
+      if (typeof trail.points === 'string') {
+        throw new Error('points is a string');
+      }
+
       trail.points.forEach((s) => {
         if (s.length > (longestLength ?? 0)) {
           longestSegment = s;

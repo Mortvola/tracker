@@ -122,8 +122,16 @@ export default class User extends BaseModel {
         const d = await parseStringPromise(body);
 
         if (d) {
-          const point: string = d.kml.Document[0].Folder[0].Placemark[0].Point[0].coordinates[0];
-          return point.split(',').map((s) => parseFloat(s));
+          const placemark = d.kml.Document[0].Folder[0].Placemark[0];
+          const timestamp = placemark.TimeStamp[0].when;
+
+          // Is the timestmap from yesterday? If so, process it.
+          const t = DateTime.fromISO(timestamp);
+          const { days } = DateTime.now().diff(t, ['days']);
+          if (days <= 1) {
+            const point: string = placemark.Point[0].coordinates[0];
+            return point.split(',').map((s) => parseFloat(s));
+          }
         }
       }
       catch (error) {

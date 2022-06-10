@@ -7,14 +7,19 @@ class HeatmapUpdater {
   intervalId: NodeJS.Timer;
 
   constructor() {
-    this.cronJob = new CronJob('0 1 * * *', () => this.updateLocations());
+    this.cronJob = new CronJob(
+      '0 1 * * *', // 1 AM
+      () => this.updateLocations(),
+      undefined,
+      undefined,
+      'America/Los_Angeles',
+    );
     this.cronJob.start();
   }
 
   async updateLocations() {
     const { default: User } = await import('App/Models/User');
     const { default: Heatmap } = await import('App/Models/Heatmap');
-    console.log('update heatmap');
 
     const users = await User.all();
     const points: [number, number][] = [];
