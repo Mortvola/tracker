@@ -1,5 +1,6 @@
 /* eslint-disable class-methods-use-this */
 import { CronJob } from 'cron';
+import { DateTime } from 'luxon';
 
 class HeatmapUpdater {
   cronJob: CronJob;
@@ -8,7 +9,7 @@ class HeatmapUpdater {
 
   constructor() {
     this.cronJob = new CronJob(
-      '0 1 * * *', // 1 AM
+      '* 1 * * *', // 1 AM
       () => this.updateLocations(),
       undefined,
       undefined,
@@ -28,7 +29,10 @@ class HeatmapUpdater {
       const result = await u.getLocation();
 
       if (result !== null) {
-        points.push(result);
+        const { hours } = DateTime.now().diff(result.timestamp, ['hours']);
+        if (hours <= 24) {
+          points.push(result.point);
+        }
       }
     }));
 

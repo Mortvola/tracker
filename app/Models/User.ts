@@ -8,6 +8,7 @@ import fetch from 'node-fetch';
 import { parseStringPromise } from 'xml2js';
 
 type GarminErrorResponse = { status: number, statusText: string };
+type PointResponse = { point: [number, number], timestamp: DateTime };
 
 export default class User extends BaseModel {
   @column({ isPrimary: true })
@@ -69,15 +70,20 @@ export default class User extends BaseModel {
     return `${Env.get('APP_URL') as string}/verify-email/${token}/${this.id}`;
   }
 
-  public async getLocation(): Promise<[number, number] | null> {
+  public async getLocation(): Promise<PointResponse | null> {
     try {
       if (this.gpsFeed) {
         const result = await User.sendLocationRequest(this.gpsFeed, this.feedPassword);
 
-        if (Array.isArray(result)) {
-          const location: [number, number] = [result[0], result[1]];
+        const isPointResponse = (r: unknown): r is PointResponse => (
+          (r as PointResponse).point !== undefined
+          && (r as PointResponse).timestamp !== undefined
+          && Array.isArray((r as PointResponse).point)
+          && (r as PointResponse).point.length >= 2
+        );
 
-          return location;
+        if (isPointResponse(result)) {
+          return result;
         }
       }
     }
@@ -91,7 +97,7 @@ export default class User extends BaseModel {
   public static async sendLocationRequest(
     feed: string,
     password: string | null,
-  ): Promise<number[] | GarminErrorResponse> {
+  ): Promise<PointResponse | null | GarminErrorResponse> {
     const garminFeed = 'https://share.garmin.com/Feed/Share';
 
     let headers: Record<string, string> | undefined;
@@ -127,18 +133,16 @@ export default class User extends BaseModel {
 
           // Is the timestmap from yesterday? If so, process it.
           const t = DateTime.fromISO(timestamp);
-          const { days } = DateTime.now().diff(t, ['days']);
-          if (days <= 1) {
-            const point: string = placemark.Point[0].coordinates[0];
-            return point.split(',').map((s) => parseFloat(s));
-          }
+          const point: string = placemark.Point[0].coordinates[0];
+          const coordinates = point.split(',').map((s) => parseFloat(s));
+          return { point: [coordinates[0], coordinates[1]], timestamp: t };
         }
       }
       catch (error) {
         console.log(error);
       }
 
-      return [];
+      return null;
     }
 
     return {
