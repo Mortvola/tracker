@@ -28,6 +28,9 @@
       ],
       "Database/*": [
         "./database/*"
+      ],
+      "Common/*": [
+        "./common/*"
       ]
     },
     "types": [

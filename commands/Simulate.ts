@@ -187,7 +187,7 @@ export default class Simulate extends BaseCommand {
 
           const heatmap = new Heatmap();
 
-          heatmap.points = JSON.stringify(points);
+          heatmap.points = points;
 
           // eslint-disable-next-line no-await-in-loop
           await heatmap.save();

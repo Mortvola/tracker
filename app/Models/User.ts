@@ -6,9 +6,7 @@ import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import fetch from 'node-fetch';
 import { parseStringPromise } from 'xml2js';
-
-type GarminErrorResponse = { status: number, statusText: string };
-type PointResponse = { point: [number, number], timestamp: DateTime };
+import { GarminErrorResponse, isPointResponse, PointResponse } from 'Common/ResponseTypes';
 
 export default class User extends BaseModel {
   @column({ isPrimary: true })
@@ -74,13 +72,6 @@ export default class User extends BaseModel {
     try {
       if (this.gpsFeed) {
         const result = await User.sendLocationRequest(this.gpsFeed, this.feedPassword);
-
-        const isPointResponse = (r: unknown): r is PointResponse => (
-          (r as PointResponse).point !== undefined
-          && (r as PointResponse).timestamp !== undefined
-          && Array.isArray((r as PointResponse).point)
-          && (r as PointResponse).point.length >= 2
-        );
 
         if (isPointResponse(result)) {
           return result;

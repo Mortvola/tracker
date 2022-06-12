@@ -14,6 +14,8 @@ export default class Trail extends BaseModel {
   @column()
   public name: string;
 
-  @column()
-  public points: [number, number][][] | string;
+  @column({
+    prepare: (value: [number, number][][]) => JSON.stringify(value),
+  })
+  public points: [number, number][][];
 }

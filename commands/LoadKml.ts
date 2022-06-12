@@ -180,7 +180,7 @@ export default class LoadKml extends BaseCommand {
       const trail = await Trail.findBy('name', this.trail);
 
       if (trail) {
-        trail.points = JSON.stringify(segmentGroups);
+        trail.points = segmentGroups;
 
         console.log('updating trail points');
 
@@ -193,7 +193,7 @@ export default class LoadKml extends BaseCommand {
 
     trail.fill({
       name: this.trail,
-      points: JSON.stringify(segmentGroups),
+      points: segmentGroups,
     });
 
     console.log('inserting trail points');

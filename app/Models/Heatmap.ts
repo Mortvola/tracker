@@ -11,6 +11,8 @@ export default class Heatmap extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   public updatedAt: DateTime;
 
-  @column()
-  public points: [number, number][] | string;
+  @column({
+    prepare: (value: [number, number][]) => JSON.stringify(value),
+  })
+  public points: [number, number][];
 }

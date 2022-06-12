@@ -7,8 +7,7 @@ import Mail from '@ioc:Adonis/Addons/Mail';
 import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import { Exception } from '@adonisjs/core/build/standalone';
-
-type GarminErrorResponse = { status: number, statusText: string };
+import { GarminErrorResponse, PointResponse } from 'Common/ResponseTypes';
 
 export default class UsersController {
   public async register({ request, response }: HttpContextContract) : Promise<string> {
@@ -148,7 +147,7 @@ export default class UsersController {
     auth: {
       user,
     },
-  }: HttpContextContract): Promise<number[] | GarminErrorResponse> {
+  }: HttpContextContract): Promise<PointResponse | GarminErrorResponse | null> {
     if (!user || user.gpsFeed === null) {
       throw new Exception('No gps feed set');
     }
@@ -156,7 +155,9 @@ export default class UsersController {
     return User.sendLocationRequest(user.gpsFeed, user.feedPassword);
   }
 
-  public async feedTest({ request }: HttpContextContract): Promise<number[] | GarminErrorResponse> {
+  public async feedTest({
+    request,
+  }: HttpContextContract): Promise<PointResponse | GarminErrorResponse | null> {
     const credentials = await request.validate({
       schema: schema.create({
         feed: schema.string([rules.trim()]),

@@ -38,7 +38,7 @@ class HeatmapUpdater {
 
     const heatmap = new Heatmap();
 
-    heatmap.points = JSON.stringify(points);
+    heatmap.points = points;
 
     heatmap.save();
   }
