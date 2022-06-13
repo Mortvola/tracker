@@ -19,9 +19,10 @@ const libraries: ['visualization'] = ['visualization'];
 type PropsType = {
   apiKey: string,
   showLocation?: boolean,
+  heatmap?: google.maps.LatLng[],
 }
 
-const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
+const Map: React.FC<PropsType> = ({ apiKey, showLocation = false, heatmap = [] }) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
@@ -31,7 +32,6 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
   const [, setMap] = React.useState<google.maps.Map | null>(null);
   const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
-  const [heatmap, setHeatmap] = React.useState<google.maps.LatLng[]>([]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -57,18 +57,6 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
 
           setTrail(body.map((p) => (
             p.map((c) => ({ lat: c[1], lng: c[0] }))
-          )));
-        }
-      })();
-
-      (async () => {
-        const response = await Http.get<[number, number][]>('/api/heatmap');
-
-        if (response.ok) {
-          const body = await response.json();
-
-          setHeatmap(body.map((p) => (
-            new google.maps.LatLng(p[1], p[0])
           )));
         }
       })();
