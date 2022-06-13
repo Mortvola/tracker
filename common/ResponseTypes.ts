@@ -14,16 +14,18 @@ export const isErrorResponse = (r: unknown): r is ErrorResponse => (
   (r as ErrorResponse).errors !== undefined
 );
 
-export type PointResponse = { point: [number, number], timestamp: DateTime };
-
-export const isPointResponse = (r: unknown): r is PointResponse => (
-  (r as PointResponse).point !== undefined
-  && (r as PointResponse).timestamp !== undefined
-  && Array.isArray((r as PointResponse).point)
-  && (r as PointResponse).point.length >= 2
-);
+export type Point = {
+  point: [number, number],
+  timestamp: DateTime,
+};
 
 export type GarminErrorResponse = { status: number, statusText: string };
+
+export type PointResponse = {
+  code: 'success' | 'parse-error' | 'garmin-error' | 'empty-response';
+  point?: Point,
+  garminErrorResponse?: GarminErrorResponse;
+}
 
 export type HeatmapListResponse = { id: number, date: string }[];
 

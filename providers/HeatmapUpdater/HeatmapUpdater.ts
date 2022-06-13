@@ -9,7 +9,7 @@ class HeatmapUpdater {
 
   constructor() {
     this.cronJob = new CronJob(
-      '* 1 * * *', // 1 AM
+      '0 1 * * *', // 1 AM
       () => this.updateLocations(),
       undefined,
       undefined,
@@ -28,10 +28,14 @@ class HeatmapUpdater {
     await Promise.all(users.map(async (u) => {
       const result = await u.getLocation();
 
-      if (result !== null) {
-        const { hours } = DateTime.now().diff(result.timestamp, ['hours']);
+      if (result !== null && result.code === 'success') {
+        if (!result.point) {
+          throw new Error('point is undefined');
+        }
+
+        const { hours } = DateTime.now().diff(result.point.timestamp, ['hours']);
         if (hours <= 24) {
-          points.push(result.point);
+          points.push(result.point.point);
         }
       }
     }));

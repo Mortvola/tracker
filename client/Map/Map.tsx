@@ -5,7 +5,9 @@ import {
 import Http from '@mortvola/http';
 import Controls from './Controls';
 import styles from './Map.module.css';
-import { HeatmapListResponse, HeatmapResponse, PointResponse, TrailResponse } from '../../common/ResponseTypes';
+import {
+  HeatmapListResponse, HeatmapResponse, PointResponse, TrailResponse,
+} from '../../common/ResponseTypes';
 
 const containerStyle = {
   width: '100%',
@@ -51,10 +53,17 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
 
         if (response.ok) {
           const body = await response.body();
-          setLocation({
-            lat: body.point[1],
-            lng: body.point[0],
-          });
+
+          if (body.code === 'success') {
+            if (!body.point) {
+              throw new Error('point is  undefined');
+            }
+
+            setLocation({
+              lat: body.point.point[1],
+              lng: body.point.point[0],
+            });
+          }
         }
       })();
     }
@@ -94,23 +103,25 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
 
   React.useEffect(() => {
     (async () => {
-      const hm = heatmapList[heatmapIndex].map;
+      if (heatmapIndex > 0 && heatmapIndex < heatmapList.length) {
+        const hm = heatmapList[heatmapIndex].map;
 
-      if (hm === null) {
-        const response = await Http.get<HeatmapResponse>(`/api/heatmap/${heatmapList[heatmapIndex].id}`);
+        if (hm === null) {
+          const response = await Http.get<HeatmapResponse>(`/api/heatmap/${heatmapList[heatmapIndex].id}`);
 
-        if (response.ok) {
-          const body = await response.json();
+          if (response.ok) {
+            const body = await response.json();
 
-          heatmapList[heatmapIndex].map = body.map((p) => (
-            new google.maps.LatLng(p[1], p[0])
-          ));
+            heatmapList[heatmapIndex].map = body.map((p) => (
+              new google.maps.LatLng(p[1], p[0])
+            ));
 
-          setHeatmap(heatmapList[heatmapIndex].map ?? []);
+            setHeatmap(heatmapList[heatmapIndex].map ?? []);
+          }
         }
-      }
-      else {
-        setHeatmap(hm);
+        else {
+          setHeatmap(hm);
+        }
       }
     })();
   }, [heatmapIndex, heatmapList]);

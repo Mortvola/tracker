@@ -6,7 +6,7 @@ import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import fetch from 'node-fetch';
 import { parseStringPromise } from 'xml2js';
-import { GarminErrorResponse, isPointResponse, PointResponse } from 'Common/ResponseTypes';
+import { PointResponse } from 'Common/ResponseTypes';
 
 export default class User extends BaseModel {
   @column({ isPrimary: true })
@@ -71,11 +71,7 @@ export default class User extends BaseModel {
   public async getLocation(): Promise<PointResponse | null> {
     try {
       if (this.gpsFeed) {
-        const result = await User.sendLocationRequest(this.gpsFeed, this.feedPassword);
-
-        if (isPointResponse(result)) {
-          return result;
-        }
+        return await User.sendLocationRequest(this.gpsFeed, this.feedPassword);
       }
     }
     catch (error) {
@@ -88,7 +84,7 @@ export default class User extends BaseModel {
   public static async sendLocationRequest(
     feed: string,
     password: string | null,
-  ): Promise<PointResponse | null | GarminErrorResponse> {
+  ): Promise<PointResponse> {
     const garminFeed = 'https://share.garmin.com/Feed/Share';
 
     let headers: Record<string, string> | undefined;
@@ -113,6 +109,10 @@ export default class User extends BaseModel {
     );
 
     if (response.ok) {
+      if (response.headers.get('content-type') !== 'application/vnd.google-earth.kml+xml') {
+        return { code: 'empty-response' };
+      }
+
       const body = await response.text();
 
       try {
@@ -126,19 +126,26 @@ export default class User extends BaseModel {
           const t = DateTime.fromISO(timestamp);
           const point: string = placemark.Point[0].coordinates[0];
           const coordinates = point.split(',').map((s) => parseFloat(s));
-          return { point: [coordinates[0], coordinates[1]], timestamp: t };
+          return {
+            code: 'success',
+            point: { point: [coordinates[0], coordinates[1]], timestamp: t },
+          };
         }
       }
       catch (error) {
         console.log(error);
+        return { code: 'parse-error' };
       }
 
-      return null;
+      return { code: 'empty-response' };
     }
 
     return {
-      status: response.status,
-      statusText: response.statusText,
+      code: 'garmin-error',
+      garminErrorResponse: {
+        status: response.status,
+        statusText: response.statusText,
+      },
     };
   }
 }

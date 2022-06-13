@@ -10,7 +10,7 @@ import { FormModal, FormField } from '@mortvola/forms';
 import Http from '@mortvola/http';
 import { Button } from 'react-bootstrap';
 import styles from './GarminFeedSettings.module.css';
-import { FeedResponse } from '../../common/ResponseTypes';
+import { FeedResponse, PointResponse } from '../../common/ResponseTypes';
 
 interface ValueType {
   feed: string,
@@ -58,8 +58,13 @@ const TestButton: React.FC = () => {
   const handleTestClick = async () => {
     setResult('Checking...');
 
+    type FeedCredentials = {
+      feed: string,
+      password: string,
+    };
+
     try {
-      const response = await Http.post('/api/feed-test', {
+      const response = await Http.post<FeedCredentials, PointResponse>('/api/feed-test', {
         feed: values.feed,
         password: values.password,
       });
@@ -67,21 +72,30 @@ const TestButton: React.FC = () => {
       if (response.ok) {
         const body = await response.body();
 
-        if (Array.isArray(body)) {
-          if (body.length >= 2) {
+        switch (body.code) {
+          case 'success':
             setResult('Success!');
-          }
-          else {
-            setResult('The MapShare address may be incorrect or disabled');
-          }
-        }
-        else if (isGarminErrorResult(body)) {
-          if (body.status === 401) {
-            setResult('The password may be incorrect');
-          }
-          else {
-            setResult('An unexpected error was returned from Garmin');
-          }
+            break;
+
+          case 'parse-error':
+            setResult('An error occured parsing the Garmin response');
+            break;
+
+          case 'garmin-error':
+            if (body.garminErrorResponse && body.garminErrorResponse.status === 401) {
+              setResult('The password may be incorrect');
+            }
+            else {
+              setResult('An unexpected error was returned from Garmin');
+            }
+            break;
+
+          case 'empty-response':
+            setResult('The MapShare address may be incorrect or your MapShare may be disabled');
+            break;
+
+          default:
+            setResult('An unexpected error has occured');
         }
       }
       else {
