@@ -5,6 +5,7 @@ import {
 import Http from '@mortvola/http';
 import Controls from './Controls';
 import styles from './Map.module.css';
+import { HeatmapListResponse, HeatmapResponse, PointResponse, TrailResponse } from '../../common/ResponseTypes';
 
 const containerStyle = {
   width: '100%',
@@ -44,38 +45,38 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
   const [heatmapIndex, setHeatmapIndex] = React.useState<number>(0);
 
   useEffect(() => {
-    if (isLoaded) {
-      if (showLocation) {
-        (async () => {
-          const response = await fetch('/api/location');
-
-          if (response.ok) {
-            const body = await response.json() as number[];
-            setLocation({
-              lat: body[1],
-              lng: body[0],
-            });
-          }
-        })();
-      }
-
+    if (showLocation) {
       (async () => {
-        const response = await fetch('/api/trail/PCT');
+        const response = await Http.get<PointResponse>('/api/location');
 
         if (response.ok) {
-          const body = await response.json() as [number, number][][];
-
-          setTrail(body.map((p) => (
-            p.map((c) => ({ lat: c[1], lng: c[0] }))
-          )));
+          const body = await response.body();
+          setLocation({
+            lat: body.point[1],
+            lng: body.point[0],
+          });
         }
       })();
     }
-  }, [isLoaded, showLocation]);
+  }, [showLocation]);
+
+  useEffect(() => {
+    (async () => {
+      const response = await Http.get<TrailResponse>('/api/trail/PCT');
+
+      if (response.ok) {
+        const body = await response.body();
+
+        setTrail(body.map((p) => (
+          p.map((c) => ({ lat: c[1], lng: c[0] }))
+        )));
+      }
+    })();
+  }, []);
 
   React.useEffect(() => {
     (async () => {
-      const response = await Http.get<{ id: number, date: string }[]>('/api/heatmap-list');
+      const response = await Http.get<HeatmapListResponse>('/api/heatmap-list');
 
       if (response.ok) {
         const body = await response.body();
@@ -96,7 +97,7 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
       const hm = heatmapList[heatmapIndex].map;
 
       if (hm === null) {
-        const response = await Http.get<[number, number][]>(`/api/heatmap/${heatmapList[heatmapIndex].id}`);
+        const response = await Http.get<HeatmapResponse>(`/api/heatmap/${heatmapList[heatmapIndex].id}`);
 
         if (response.ok) {
           const body = await response.json();

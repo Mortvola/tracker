@@ -7,7 +7,7 @@ import Mail from '@ioc:Adonis/Addons/Mail';
 import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import { Exception } from '@adonisjs/core/build/standalone';
-import { GarminErrorResponse, PointResponse } from 'Common/ResponseTypes';
+import { FeedResponse, GarminErrorResponse, PointResponse } from 'Common/ResponseTypes';
 
 export default class UsersController {
   public async register({ request, response }: HttpContextContract) : Promise<string> {
@@ -193,7 +193,7 @@ export default class UsersController {
     auth: {
       user,
     },
-  }: HttpContextContract): Promise<{ gpsFeed: string, feedPassword: string }> {
+  }: HttpContextContract): Promise<FeedResponse> {
     if (!user) {
       throw new Exception('user is not set');
     }

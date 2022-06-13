@@ -1,4 +1,4 @@
-import { DateTime } from "luxon";
+import { DateTime } from 'luxon';
 
 export interface Error {
   field: string;
@@ -24,3 +24,11 @@ export const isPointResponse = (r: unknown): r is PointResponse => (
 );
 
 export type GarminErrorResponse = { status: number, statusText: string };
+
+export type HeatmapListResponse = { id: number, date: string }[];
+
+export type HeatmapResponse = [number, number][];
+
+export type TrailResponse = [number, number][][];
+
+export type FeedResponse = { gpsFeed: string, feedPassword: string };

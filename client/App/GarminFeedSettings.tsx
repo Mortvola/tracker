@@ -9,8 +9,8 @@ import { makeUseModal, ModalProps } from '@mortvola/usemodal';
 import { FormModal, FormField } from '@mortvola/forms';
 import Http from '@mortvola/http';
 import { Button } from 'react-bootstrap';
-import { GpsFeedInterface } from './state/types';
 import styles from './GarminFeedSettings.module.css';
+import { FeedResponse } from '../../common/ResponseTypes';
 
 interface ValueType {
   feed: string,
@@ -104,11 +104,11 @@ const TestButton: React.FC = () => {
 const GarminFeedSettings: React.FC<ModalProps> = ({
   setShow,
 }) => {
-  const [user, setUser] = React.useState<GpsFeedInterface | null>(null);
+  const [user, setUser] = React.useState<FeedResponse | null>(null);
 
   React.useEffect(() => {
     (async () => {
-      const response = await Http.get<GpsFeedInterface>('/api/feed');
+      const response = await Http.get<FeedResponse>('/api/feed');
 
       if (response.ok) {
         const body = await response.body();

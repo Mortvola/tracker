@@ -2,9 +2,10 @@
 // import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 
 import Heatmap from "App/Models/Heatmap";
+import { HeatmapListResponse, HeatmapResponse } from "Common/ResponseTypes";
 
 export default class HeatmapsController {
-  public async get({ params }): Promise<[number, number][]> {
+  public async get({ params }): Promise<HeatmapResponse> {
     let heatmap: Heatmap | null;
 
     if (params.id === 'latest') {
@@ -17,7 +18,7 @@ export default class HeatmapsController {
     return heatmap?.points ?? [];
   }
 
-  public async getList(): Promise<{ id: number, date: string }[]> {
+  public async getList(): Promise<HeatmapListResponse> {
     const heatmaps = await Heatmap.query().select('id', 'created_at').orderBy('created_at', 'asc');
 
     return heatmaps.map((hm) => ({ id: hm.id, date: hm.createdAt.toISODate() }));
