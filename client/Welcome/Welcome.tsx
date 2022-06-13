@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import CookieConsent from 'react-cookie-consent';
 import Http from '@mortvola/http';
-import Map from '../Map/Map';
+import GoogleMap from '../Map/Map';
 import styles from './Welcome.module.css';
 import Login from './login/Login';
 import Register from './login/Register';
@@ -14,10 +14,17 @@ type PropsType = {
 }
 
 const App: React.FC<PropsType> = ({ mapApiKey }) => {
+  type HeatmapListEntry = {
+    id: number,
+    date: string,
+    map: null | google.maps.LatLng[],
+  };
+
   const [showLogin, setShowLogin] = React.useState(false);
   const [showRegister, setShowRegister] = React.useState(false);
-  const [heatmapList, setHeatmaplist] = React.useState<{ id: number, date: string }[]>([]);
+  const [heatmapList, setHeatmaplist] = React.useState<HeatmapListEntry[]>([]);
   const [heatmap, setHeatmap] = React.useState<google.maps.LatLng[]>([]);
+  const [heatmapIndex, setHeatmapIndex] = React.useState<number>(0);
 
   React.useEffect(() => {
     (async () => {
@@ -26,7 +33,13 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
       if (response.ok) {
         const body = await response.body();
 
-        setHeatmaplist(body);
+        setHeatmaplist(body.map((m) => ({
+          id: m.id,
+          date: m.date,
+          map: null,
+        })));
+
+        setHeatmapIndex(body.length - 1);
       }
     })();
   }, []);
@@ -47,19 +60,32 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
     setShowRegister(false);
   };
 
-  const handleChange = (value: number) => {
+  const handleChange = async (value: number) => {
+    setHeatmapIndex(value);
+  };
+
+  React.useEffect(() => {
     (async () => {
-      const response = await Http.get<[number, number][]>(`/api/heatmap/${heatmapList[value].id}`);
+      const hm = heatmapList[heatmapIndex].map;
 
-      if (response.ok) {
-        const body = await response.json();
+      if (hm === null) {
+        const response = await Http.get<[number, number][]>(`/api/heatmap/${heatmapList[heatmapIndex].id}`);
 
-        setHeatmap(body.map((p) => (
-          new google.maps.LatLng(p[1], p[0])
-        )));
+        if (response.ok) {
+          const body = await response.json();
+
+          heatmapList[heatmapIndex].map = body.map((p) => (
+            new google.maps.LatLng(p[1], p[0])
+          ));
+
+          setHeatmap(heatmapList[heatmapIndex].map ?? []);
+        }
+      }
+      else {
+        setHeatmap(hm);
       }
     })();
-};
+  }, [heatmapIndex, heatmapList]);
 
   return (
     <div className={styles.layout}>
@@ -67,8 +93,13 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
         <button type="button" onClick={handleRegisterClick}>Register</button>
         <button type="button" onClick={handleLoginClick}>Login</button>
       </div>
-      <Map apiKey={mapApiKey} heatmap={heatmap} />
-      <Controls min={0} max={heatmapList.length - 1} onChange={handleChange} />
+      <GoogleMap apiKey={mapApiKey} heatmap={heatmap} />
+      <Controls
+        min={0}
+        max={heatmapList.length - 1}
+        onChange={handleChange}
+        value={heatmapIndex}
+      />
       <CookieConsent>
         This site uses cookies to enhance the user experience.
       </CookieConsent>

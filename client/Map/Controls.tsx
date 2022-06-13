@@ -4,12 +4,14 @@ import styles from './Controls.module.css';
 type PropsType = {
   min: number,
   max: number,
+  value: number,
   onChange: (value: number) => void,
 }
 
-const Controls: React.FC<PropsType> = ({ min, max, onChange }) => {
+const Controls: React.FC<PropsType> = ({
+  min, max, value, onChange,
+}) => {
   const ref = React.useRef<HTMLDivElement>(null);
-  const [value, setValue] = React.useState<number>(0);
   const captureRef = React.useRef<boolean>(false);
 
   const mouseToPercent = (clientX: number) => {
@@ -18,7 +20,6 @@ const Controls: React.FC<PropsType> = ({ min, max, onChange }) => {
       const rects = bar.getClientRects();
       const pct = (clientX - rects[0].left) / rects[0].width;
       const v = Math.round((max - min) * pct);
-      setValue((v / (max - min)) * 100);
       onChange(v);
     }
   };
@@ -56,6 +57,10 @@ const Controls: React.FC<PropsType> = ({ min, max, onChange }) => {
     event.preventDefault();
   };
 
+  const valueToPercentage = (v: number) => (
+    (((v - min) / (max - min)) * 100)
+  );
+
   return (
     <div className={styles.controls}>
       <div
@@ -65,7 +70,10 @@ const Controls: React.FC<PropsType> = ({ min, max, onChange }) => {
         onPointerUp={handlePointerUp}
         onPointerMove={handlePointerMove}
       >
-        <div className={styles.progress} style={{ width: `${value.toString()}%` }} />
+        <div
+          className={styles.progress}
+          style={{ width: `${valueToPercentage(value).toString()}%` }}
+        />
       </div>
     </div>
   );
