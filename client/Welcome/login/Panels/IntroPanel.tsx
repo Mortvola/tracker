@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from 'react-bootstrap';
-import { SocialIcon } from 'react-social-icons';
 import styles from './IntroPanel.module.css';
 
 const IntroPanel: React.FC = () => {
@@ -22,13 +21,12 @@ const IntroPanel: React.FC = () => {
       </Button>
       <Button variant="outline-dark" onClick={handleFacebookClick}>
         <div>
-          <SocialIcon network="facebook" style={{ height: '2rem', width: '2rem' }} />
+          <img src="/2021_Facebook_icon.svg" alt="" style={{ height: '2rem', width: '2rem' }} />
           Sign in with Facebook
         </div>
       </Button>
       <Button variant="outline-dark">
         <div>
-          <SocialIcon network="email" style={{ height: '2rem', width: '2rem' }} />
           Sign in with Email
         </div>
       </Button>

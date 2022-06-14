@@ -46,7 +46,7 @@ export default class Authentication extends BaseModel {
   public password: string | null;
 
   @column()
-  public rememberMeToken?: string | null;
+  public rememberMeToken: string | null;
 
   @column()
   public activated: boolean | null;

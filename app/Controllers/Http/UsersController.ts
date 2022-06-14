@@ -162,7 +162,11 @@ export default class UsersController {
       user,
     },
   }: HttpContextContract): Promise<PointResponse> {
-    if (!user || user.gpsFeed === null) {
+    if (!user) {
+      throw new Exception('User not set');
+    }
+
+    if (!user.gpsFeed) {
       throw new Exception('No gps feed set');
     }
 

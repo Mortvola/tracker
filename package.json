@@ -77,7 +77,6 @@
     "react-bootstrap": "^2.4.0",
     "react-cookie-consent": "^7.4.1",
     "react-dom": "^18.1.0",
-    "react-social-icons": "^5.13.0",
     "reflect-metadata": "^0.1.13",
     "remove-files-webpack-plugin": "^1.5.0",
     "source-map-support": "^0.5.21",

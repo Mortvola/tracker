@@ -40,7 +40,7 @@ Route.get('/home', async ({ view, auth: { user } }) => {
   }
 
   const props = {
-    username: user.username,
+    username: '',
     mapApiKey: Env.get('MAP_API_KEY'),
   };
 
@@ -105,6 +105,7 @@ const handleOauth2 = async (
       .first();
 
     if (authentication) {
+      // Make sure there is a user record
       const user = await User.findOrFail(authentication.userId);
 
       authentication.merge({
@@ -144,6 +145,7 @@ const handleOauth2 = async (
         await auth.use('web').login(user);
       }
       catch (error) {
+        console.log(error);
         await trx.rollback();
         throw error;
       }

@@ -1,7 +1,9 @@
-import { ApplicationContract } from '@ioc:Adonis/Core/Application'
+/* eslint-disable class-methods-use-this */
+import { ApplicationContract } from '@ioc:Adonis/Core/Application';
 import HeatmapUpdater from './HeatmapUpdater/HeatmapUpdater';
 
 export default class AppProvider {
+  // eslint-disable-next-line no-useless-constructor
   constructor(protected app: ApplicationContract) {}
 
   public register() {
@@ -15,6 +17,12 @@ export default class AppProvider {
 
   public async boot() {
     // IoC container is ready
+    const Auth = this.app.container.resolveBinding('Adonis/Addons/Auth');
+    const Hash = this.app.container.resolveBinding('Adonis/Core/Hash');
+
+    const { MyUserProvider } = await import('./MyUserProvider');
+
+    Auth.extend('provider', 'myProvider', (_, __, config) => new MyUserProvider(config, Hash));
   }
 
   public async ready() {
