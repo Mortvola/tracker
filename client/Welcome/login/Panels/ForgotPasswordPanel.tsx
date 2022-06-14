@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import React from 'react';
 import { Errors } from '@mortvola/forms';
-import { ErrorsType } from './submit';
+import { ErrorsType } from '../submit';
 
 type PropsType = {
   onHide: () => void,

@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Modal } from 'react-bootstrap';
 import { submitForm, defaultErrors } from './submit';
-import LoginPanel from './LoginPanel';
-import ForgotPasswordPanel from './ForgotPasswordPanel';
-import ResetEmailSentPanel from './ResetEmailSentPanel';
+import LoginPanel from './Panels/LoginPanel';
+import IntroPanel from './Panels/IntroPanel';
+import ForgotPasswordPanel from './Panels/ForgotPasswordPanel';
+import ResetEmailSentPanel from './Panels/ResetEmailSentPanel';
 import Waiting from './Waiting';
 
 type PropsType = {
@@ -15,7 +16,8 @@ const Login: React.FC<PropsType> = ({
   show,
   onHide,
 }) => {
-  const [card, setCard] = useState('login');
+  type PanelTypes = 'intro' | 'login' | 'forgot' | 'reset';
+  const [card, setCard] = useState<PanelTypes>('intro');
   const [resetMessage, setResetMessage] = useState('');
   const [waiting, setWaiting] = useState(false);
   const [errors, setErrors] = useState(defaultErrors);
@@ -78,18 +80,30 @@ const Login: React.FC<PropsType> = ({
     setErrors(defaultErrors);
   };
 
-  let title = 'Login';
-  let panel = (
-    <LoginPanel
-      ref={formRef}
-      onHide={onHide}
-      onLogin={handleLogin}
-      onForgotPasswordClick={handleForgotPasswordClick}
-      errors={errors}
-    />
-  );
+  let title: string | null = null;
+  let panel: React.ReactElement | null = null;
 
   switch (card) {
+    case 'intro':
+      title = 'Login';
+      panel = (
+        <IntroPanel />
+      );
+      break;
+
+    case 'login':
+      title = 'Login';
+      panel = (
+        <LoginPanel
+          ref={formRef}
+          onHide={onHide}
+          onLogin={handleLogin}
+          onForgotPasswordClick={handleForgotPasswordClick}
+          errors={errors}
+        />
+      );
+      break;
+
     case 'forgot':
       title = 'Forgot Password';
       panel = (
@@ -102,14 +116,19 @@ const Login: React.FC<PropsType> = ({
         />
       );
       break;
+
     case 'reset':
       title = 'Reset Link';
       panel = (
         <ResetEmailSentPanel resetMessage={resetMessage} />
       );
       break;
+
     default:
-      title = 'Login';
+  }
+
+  if (!title || !panel) {
+    return null;
   }
 
   return (

@@ -6,7 +6,7 @@
   "exclude": [
     "node_modules",
     "build",
-    "client",
+    "client"
   ],
   "compilerOptions": {
     "jsx": "react",
@@ -42,7 +42,8 @@
       "@japa/preset-adonis/build/adonis-typings",
       "@adonisjs/lucid",
       "@adonisjs/auth",
-      "@adonisjs/mail"
+      "@adonisjs/mail",
+      "@adonisjs/ally"
     ]
   }
 }

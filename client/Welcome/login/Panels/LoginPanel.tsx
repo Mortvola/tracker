@@ -1,17 +1,19 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import React from 'react';
 import { Errors } from '@mortvola/forms';
-import { ErrorsType } from './submit';
+import { ErrorsType } from '../submit';
 
 type PropsType = {
   onHide: () => void,
-  onRegister: () => void,
+  onLogin: () => void,
+  onForgotPasswordClick: () => void,
   errors: ErrorsType,
-}
+};
 
-const RegisterPanel = React.forwardRef<HTMLFormElement, PropsType>(({
+const LoginPanel = React.forwardRef<HTMLFormElement, PropsType>(({
   onHide,
-  onRegister,
+  onLogin,
+  onForgotPasswordClick,
   errors,
 }, forwardRef) => (
   <form ref={forwardRef}>
@@ -20,7 +22,6 @@ const RegisterPanel = React.forwardRef<HTMLFormElement, PropsType>(({
 
       <div className="col-md-8">
         <input type="text" className="form-control" name="username" required autoComplete="username" />
-
         <span className="text-danger" role="alert">
           <Errors errors={errors.username} />
         </span>
@@ -28,23 +29,10 @@ const RegisterPanel = React.forwardRef<HTMLFormElement, PropsType>(({
     </div>
 
     <div className="form-group row">
-      <label htmlFor="email" className="col-md-3 col-form-label text-md-right">E-Mail Address</label>
+      <label htmlFor="loginPassword" className="col-md-3 col-form-label text-md-right">Password</label>
 
       <div className="col-md-8">
-        <input type="email" className="form-control" name="email" defaultValue="" required autoComplete="email" />
-
-        <span className="text-danger" role="alert">
-          <Errors errors={errors.email} />
-        </span>
-      </div>
-    </div>
-
-    <div className="form-group row">
-      <label htmlFor="registerPassword" className="col-md-3 col-form-label text-md-right">Password</label>
-
-      <div className="col-md-8">
-        <input type="password" className="form-control" name="password" required autoComplete="new-password" />
-
+        <input type="password" className="form-control" name="password" required autoComplete="current-password" />
         <span className="text-danger" role="alert">
           <Errors errors={errors.password} />
         </span>
@@ -52,17 +40,21 @@ const RegisterPanel = React.forwardRef<HTMLFormElement, PropsType>(({
     </div>
 
     <div className="form-group row">
-      <label htmlFor="password-confirm" className="col-md-3 col-form-label text-md-right">Confirm Password</label>
+      <div className="col-md-8 offset-md-3">
+        <div className="form-check">
+          <input className="form-check-input" type="checkbox" name="remember" />
 
-      <div className="col-md-8">
-        <input type="password" className="form-control" name="password_confirmation" required autoComplete="new-password" />
+          <label className="form-check-label" htmlFor="remember">
+            Remember Me
+          </label>
+        </div>
       </div>
     </div>
 
     <div className="form-group row mb-0">
       <div className="col-md-8 offset-md-3">
-        <button type="button" className="btn btn-primary" onClick={onRegister}>
-          Register
+        <button type="button" className="btn btn-primary" onClick={onLogin}>
+          Login
         </button>
         <button type="button" className="btn" onClick={onHide}>Cancel</button>
 
@@ -71,9 +63,17 @@ const RegisterPanel = React.forwardRef<HTMLFormElement, PropsType>(({
         </span>
       </div>
     </div>
+
+    <div className="form-group row mb-0">
+      <div className="col-md-8 offset-md-3">
+        <div onClick={onForgotPasswordClick} className="text-link">
+          I forgot my password.
+        </div>
+      </div>
+    </div>
   </form>
 ));
 
-RegisterPanel.displayName = 'RegisterPanel';
+LoginPanel.displayName = 'LoginPanel';
 
-export default RegisterPanel;
+export default LoginPanel;

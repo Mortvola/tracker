@@ -8,6 +8,7 @@ import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import { Exception } from '@adonisjs/core/build/standalone';
 import { FeedResponse, PointResponse } from 'Common/ResponseTypes';
+import Authentication from 'App/Models/Authentication';
 
 export default class UsersController {
   public async register({ request, response }: HttpContextContract) : Promise<string> {
@@ -45,18 +46,26 @@ export default class UsersController {
      * Create a new user
      */
     const user = new User();
-    user.username = userDetails.username;
-    user.email = userDetails.email;
-    user.password = userDetails.password;
     await user.save();
+
+    const authentication = new Authentication();
+
+    authentication.fill({
+      type: 'email',
+      userId: user.id,
+      username: userDetails.username,
+      email: userDetails.email,
+      password: userDetails.password,
+    });
+    await authentication.save();
 
     Mail.send((message) => {
       message
         .from(Env.get('MAIL_FROM_ADDRESS') as string, Env.get('MAIL_FROM_NAME') as string)
-        .to(user.email)
+        .to(userDetails.email)
         .subject('Welcome to the SaunterQuest Tracker!')
         .htmlView('emails/welcome', {
-          url: user.getEmailVerificationLink(),
+          url: authentication.getEmailVerificationLink(),
           expires: Env.get('TOKEN_EXPIRATION'),
         });
     });
@@ -69,34 +78,39 @@ export default class UsersController {
   public async verifyEmail({
     params, view, logger,
   }: HttpContextContract) : Promise<(string | void)> {
-    const user = await User.find(params.id);
+    const user = await User.findOrFail(params.id);
 
-    if (user) {
-      const payload = jwt.verify(params.token, user.generateSecret()) as Record<string, unknown>;
+    const authentication = await Authentication.query()
+      .where('userId', user.id)
+      .andWhere('type', 'email')
+      .firstOrFail();
 
-      if (payload.id === user.id) {
-        if (!user.activated) {
-          user.activated = true;
-          user.save();
+    const payload = jwt.verify(
+      params.token, authentication.generateSecret(),
+    ) as Record<string, unknown>;
+
+    if (payload.id === authentication.id) {
+      if (!authentication.activated) {
+        authentication.activated = true;
+        authentication.save();
+
+        return view.render('emailVerified');
+      }
+
+      if (authentication.pendingEmail) {
+        // todo: if the matches fail, send the user to a failure page.
+        if (payload.hash === sha256(authentication.pendingEmail)) {
+          authentication.email = authentication.pendingEmail;
+          authentication.pendingEmail = null;
+
+          await authentication.save();
 
           return view.render('emailVerified');
         }
-
-        if (user.pendingEmail) {
-          // todo: if the matches fail, send the user to a failure page.
-          if (payload.hash === sha256(user.pendingEmail)) {
-            user.email = user.pendingEmail;
-            user.pendingEmail = null;
-
-            await user.save();
-
-            return view.render('emailVerified');
-          }
-        }
       }
-
-      logger.error(`Invalid payload "${payload.id}" in token for user ${user.username}`);
     }
+
+    logger.error(`Invalid payload "${payload.id}" in token for user ${authentication.username}`);
 
     return undefined;
   }

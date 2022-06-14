@@ -2,8 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Modal } from 'react-bootstrap';
 import { submitForm, defaultErrors } from './submit';
 import Waiting from './Waiting';
-import RegisterPanel from './RegisterPanel';
-import ResetEmailSentPanel from './ResetEmailSentPanel';
+import RegisterPanel from './Panels/RegisterPanel';
+import ResetEmailSentPanel from './Panels/ResetEmailSentPanel';
 
 type PropsType = {
   show: boolean,
