@@ -148,13 +148,14 @@ Route.post('/facebook/data-deletion', async ({ request, response }) => {
 });
 
 Route.get('/google/redirect', async ({ ally }) => (
-  ally.use('google').redirect()
+  ally.use('google').redirect((redirectRequest) => {
+    redirectRequest
+      .param('prompt', 'select_account');
+  })
 ));
 
 Route.get('/facebook/redirect', async ({ ally }) => (
-  ally.use('facebook').redirect((request) => {
-    request.scopes(['email']);
-  })
+  ally.use('facebook').redirect()
 ));
 
 const handleOauth2 = async (
