@@ -6,13 +6,15 @@ import Map from '../Map/Map';
 import styles from './App.module.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useGarminFeedSettings } from './GarminFeedSettings';
+import AvatarButton from './AvatarButton';
 
 type PropsType = {
   username: string,
   mapApiKey: string,
+  avatarUrl: string | null,
 }
 
-const App: React.FC<PropsType> = ({ username, mapApiKey }) => {
+const App: React.FC<PropsType> = ({ username, mapApiKey, avatarUrl }) => {
   const [Settings, showSettings] = useGarminFeedSettings();
 
   const handleSelect = async (event: string | null) => {
@@ -39,10 +41,13 @@ const App: React.FC<PropsType> = ({ username, mapApiKey }) => {
   return (
     <div className={styles.layout}>
       <div className={styles.toolbar}>
-        <DropdownButton title={username} onSelect={handleSelect}>
-          <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
-          <Dropdown.Item eventKey="LOGOUT">Logout</Dropdown.Item>
-        </DropdownButton>
+        <Dropdown onSelect={handleSelect}>
+          <Dropdown.Toggle avatarUrl={avatarUrl ?? ''} as={AvatarButton} />
+          <Dropdown.Menu>
+            <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
+            <Dropdown.Item eventKey="LOGOUT">Logout</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
       </div>
       <Map apiKey={mapApiKey} showLocation />
       <Settings />

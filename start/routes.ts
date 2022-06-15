@@ -26,22 +26,47 @@ import Authentication from 'App/Models/Authentication';
 import Database from '@ioc:Adonis/Lucid/Database';
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
 
-Route.get('/', async ({ view }) => {
+Route.get('/', async ({ view, auth: { user }, response }) => {
+  if (user) {
+    return response.redirect('/home');
+  }
+
   const props = {
     mapApiKey: Env.get('MAP_API_KEY'),
   };
 
   return view.render('welcome', { props });
 });
+// todo: add silent auth
 
-Route.get('/home', async ({ view, auth: { user } }) => {
+Route.get('/home', async ({
+  view,
+  auth: {
+    user,
+  },
+  session,
+  response,
+}) => {
   if (!user) {
     throw new Exception('user not set');
+  }
+
+  const authenticationId = session.get('authenticationId');
+
+  if (authenticationId === undefined) {
+    return response.redirect('/');
+  }
+
+  const authentication = await Authentication.find(authenticationId);
+
+  if (!authentication) {
+    return response.redirect('/');
   }
 
   const props = {
     username: '',
     mapApiKey: Env.get('MAP_API_KEY'),
+    avatarUrl: authentication.avatarUrl,
   };
 
   return view.render('home', { props });
@@ -63,7 +88,13 @@ Route.get('/facebook/redirect', async ({ ally }) => (
 ));
 
 const handleOauth2 = async (
-  { ally, auth, response }: HttpContextContract,
+  {
+    ally,
+    auth,
+    response,
+    logger,
+    session,
+  }: HttpContextContract,
   providerName: 'google' | 'facebook',
 ) => {
   const provider = ally.use(providerName);
@@ -112,11 +143,14 @@ const handleOauth2 = async (
         email: providerUser.email,
         emailVerificationStatus: providerUser.emailVerificationState,
         providerAccessToken: providerUser.token.token,
+        avatarUrl: providerUser.avatarUrl,
       });
 
       await authentication.save();
 
       await auth.use('web').login(user);
+
+      session.put('authenticationId', authentication.id);
     }
     else {
       const trx = await Database.transaction();
@@ -136,6 +170,7 @@ const handleOauth2 = async (
           emailVerificationStatus: providerUser.emailVerificationState,
           providerUserId: providerUser.id,
           providerAccessToken: providerUser.token.token,
+          avatarUrl: providerUser.avatarUrl,
         });
 
         await authentication.save();
@@ -143,9 +178,11 @@ const handleOauth2 = async (
         await trx.commit();
 
         await auth.use('web').login(user);
+
+        session.put('authenticationId', authentication.id);
       }
       catch (error) {
-        console.log(error);
+        logger.error(error);
         await trx.rollback();
         throw error;
       }

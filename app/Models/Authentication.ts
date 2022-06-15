@@ -54,6 +54,9 @@ export default class Authentication extends BaseModel {
   @column()
   public accessToken: string | null;
 
+  @column()
+  public avatarUrl: string | null;
+
   @beforeSave()
   public static async hashPassword(authentication: Authentication) {
     if (authentication.$dirty.password) {
