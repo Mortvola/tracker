@@ -144,8 +144,6 @@ export default class OAuthsController {
   }
 
   public async dataDelete({ request, response, params }: HttpContextContract) {
-    console.log('data deletion called');
-
     const providerName = params.provider;
 
     if (providerName !== 'facebook') {
