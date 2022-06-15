@@ -4,11 +4,11 @@ import styles from './IntroPanel.module.css';
 
 const IntroPanel: React.FC = () => {
   const handleGoogleClick = () => {
-    window.location.replace('/google/redirect');
+    window.location.replace('/oauth-redirect/google');
   };
 
   const handleFacebookClick = () => {
-    window.location.replace('/facebook/redirect');
+    window.location.replace('/oauth-redirect/facebook');
   };
 
   return (
