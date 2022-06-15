@@ -25,6 +25,8 @@ import User from 'App/Models/User';
 import Authentication from 'App/Models/Authentication';
 import Database from '@ioc:Adonis/Lucid/Database';
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
+import { sha256 } from 'js-sha256';
+import DataDeletionLog from 'App/Models/DataDeletionLog';
 
 Route.get('/', async ({ view, auth: { user }, response }) => {
   if (user) {
@@ -76,6 +78,74 @@ Route.post('/register', 'UsersController.register');
 Route.get('/verify-email/:token/:id', 'UsersController.verifyEmail');
 Route.post('/login', 'UsersController.login');
 Route.post('/logout', 'UsersController.logout');
+
+Route.get('/privacy-policy', ({ view }) => (
+  view.render('privacy-policy')
+));
+
+Route.post('/facebook/data-deletion', async ({ request, response }) => {
+  const body = request.raw();
+  if (!body) {
+    throw new Exception('no payload delivered', 400);
+  }
+
+  const [, signedRequset] = body.split('=');
+  const [encodedSignature, encodedPayload] = signedRequset.split('.');
+
+  const signature = Buffer.from(encodedSignature, 'base64').toString('hex');
+  const payloadString = Buffer.from(encodedPayload, 'base64').toString();
+  const payload = JSON.parse(payloadString);
+
+  const payloadHash = sha256.hmac(Env.get('FACEBOOK_CLIENT_SECRET'), encodedPayload);
+
+  if (payloadHash !== signature) {
+    throw new Exception('invalid signature', 400);
+  }
+
+  const trx = await Database.transaction();
+
+  try {
+    const authentication = await Authentication.query({ client: trx })
+      .where('providerUserId', payload.user_id)
+      .andWhere('provider', 'facebook')
+      .first();
+
+    const log = (new DataDeletionLog()).useTransaction(trx);
+
+    if (authentication) {
+      await authentication.delete();
+
+      log.description = `Deleted data for facebook user id ${authentication.providerUserId}`;
+
+      const authentications = await Authentication.query({ client: trx }).where('userId', authentication.userId);
+
+      if (authentications.length === 0) {
+        // The user has no other authentications so delete the user.
+        const user = await User.find(authentication.userId, { client: trx });
+
+        if (user) {
+          await user.delete();
+        }
+      }
+    }
+    else {
+      log.description = `No data found for facebook user id ${payload.user_id}`;
+    }
+
+    await log.save();
+
+    await trx.commit();
+
+    return response.json({
+      url: `${Env.get('APP_URL')}/data-deletion?id=${log.id}`,
+      confirmation_code: log.id,
+    });
+  }
+  catch (error) {
+    trx.rollback();
+    throw error;
+  }
+});
 
 Route.get('/google/redirect', async ({ ally }) => (
   ally.use('google').redirect()
