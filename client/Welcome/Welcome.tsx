@@ -35,7 +35,7 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
     <div className={styles.layout}>
       <div className={styles.toolbar}>
         <button type="button" onClick={handleRegisterClick}>Register</button>
-        <button type="button" onClick={handleLoginClick}>Login</button>
+        <button type="button" onClick={handleLoginClick}>Sign In</button>
       </div>
       <Map apiKey={mapApiKey} />
       <CookieConsent>

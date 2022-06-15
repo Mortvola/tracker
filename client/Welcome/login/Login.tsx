@@ -75,7 +75,7 @@ const Login: React.FC<PropsType> = ({
   };
 
   const handleExited = () => {
-    setCard('login');
+    setCard('intro');
     setResetMessage('');
     setErrors(defaultErrors);
   };
@@ -85,14 +85,14 @@ const Login: React.FC<PropsType> = ({
 
   switch (card) {
     case 'intro':
-      title = 'Login';
+      title = 'Sign In';
       panel = (
         <IntroPanel />
       );
       break;
 
     case 'login':
-      title = 'Login';
+      title = 'Sign In';
       panel = (
         <LoginPanel
           ref={formRef}

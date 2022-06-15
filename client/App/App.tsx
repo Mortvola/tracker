@@ -45,7 +45,7 @@ const App: React.FC<PropsType> = ({ username, mapApiKey, avatarUrl }) => {
           <Dropdown.Toggle avatarUrl={avatarUrl ?? ''} as={AvatarButton} />
           <Dropdown.Menu>
             <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
-            <Dropdown.Item eventKey="LOGOUT">Logout</Dropdown.Item>
+            <Dropdown.Item eventKey="LOGOUT">Sign Out</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
       </div>

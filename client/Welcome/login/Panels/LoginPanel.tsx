@@ -54,7 +54,7 @@ const LoginPanel = React.forwardRef<HTMLFormElement, PropsType>(({
     <div className="form-group row mb-0">
       <div className="col-md-8 offset-md-3">
         <button type="button" className="btn btn-primary" onClick={onLogin}>
-          Login
+          Sign In
         </button>
         <button type="button" className="btn" onClick={onHide}>Cancel</button>
 
