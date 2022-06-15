@@ -4,13 +4,14 @@ import {
   useField,
   FieldInputProps,
   useFormikContext,
+  FormikHelpers,
 } from 'formik';
 import { makeUseModal, ModalProps } from '@mortvola/usemodal';
-import { FormModal, FormField } from '@mortvola/forms';
+import { FormModal, FormField, setFormErrors } from '@mortvola/forms';
 import Http from '@mortvola/http';
 import { Button } from 'react-bootstrap';
 import styles from './GarminFeedSettings.module.css';
-import { FeedResponse, PointResponse } from '../../common/ResponseTypes';
+import { FeedResponse, isErrorResponse, PointResponse } from '../../common/ResponseTypes';
 
 interface ValueType {
   feed: string,
@@ -44,16 +45,9 @@ const GarminAddress: React.FC<GarminAddressProps & FieldInputProps<string>> = ({
   );
 };
 
-type GarminErrorResponse = { status: number, statusText: string};
-
 const TestButton: React.FC = () => {
   const { values } = useFormikContext<ValueType>();
   const [result, setResult] = React.useState<string | null>(null);
-
-  const isGarminErrorResult = (r: unknown): r is GarminErrorResponse => (
-    (r as GarminErrorResponse).status !== undefined
-    && (r as GarminErrorResponse).statusText !== undefined
-  );
 
   const handleTestClick = async () => {
     setResult('Checking...');
@@ -132,7 +126,7 @@ const GarminFeedSettings: React.FC<ModalProps> = ({
     })();
   }, []);
 
-  const handleSubmit = async (values: ValueType) => {
+  const handleSubmit = async (values: ValueType, helpers: FormikHelpers<ValueType>) => {
     const response = await Http.put('/api/feed', {
       feed: values.feed,
       password: values.password,
@@ -140,6 +134,13 @@ const GarminFeedSettings: React.FC<ModalProps> = ({
 
     if (response.ok) {
       setShow(false);
+    }
+    else {
+      const body = await response.body();
+
+      if (isErrorResponse(body)) {
+        setFormErrors(helpers.setErrors, body.errors);
+      }
     }
   };
 

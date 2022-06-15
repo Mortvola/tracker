@@ -196,9 +196,15 @@ export default class UsersController {
 
     const credentials = await request.validate({
       schema: schema.create({
-        feed: schema.string.optional([rules.trim()]),
+        feed: schema.string.optional([
+          rules.trim(),
+          rules.unique({ table: 'users', column: 'gps_feed' }),
+        ]),
         password: schema.string.optional([rules.trim()]),
       }),
+      messages: {
+        'feed.unique': 'This Garmin MapShare URL is currently in use',
+      },
     });
 
     user.gpsFeed = credentials.feed ?? null;
