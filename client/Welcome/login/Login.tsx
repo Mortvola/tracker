@@ -5,6 +5,7 @@ import LoginPanel from './Panels/LoginPanel';
 import IntroPanel from './Panels/IntroPanel';
 import ForgotPasswordPanel from './Panels/ForgotPasswordPanel';
 import ResetEmailSentPanel from './Panels/ResetEmailSentPanel';
+import RegisterPanel from './Panels/RegisterPanel';
 import Waiting from './Waiting';
 
 type PropsType = {
@@ -16,12 +17,24 @@ const Login: React.FC<PropsType> = ({
   show,
   onHide,
 }) => {
-  type PanelTypes = 'intro' | 'login' | 'forgot' | 'reset';
+  type PanelTypes = 'intro' | 'login' | 'forgot' | 'reset' | 'register';
   const [card, setCard] = useState<PanelTypes>('intro');
   const [resetMessage, setResetMessage] = useState('');
   const [waiting, setWaiting] = useState(false);
   const [errors, setErrors] = useState(defaultErrors);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const handleSignInWithEmail = () => {
+    setCard('login');
+  };
+
+  const handleSignUpClick = () => {
+    setCard('register');
+  };
+
+  const handleSignInClick = () => {
+    setCard('intro');
+  };
 
   const handleForgotPasswordClick = () => {
     setCard('forgot');
@@ -29,31 +42,6 @@ const Login: React.FC<PropsType> = ({
 
   const handleRememberedPasswordClick = () => {
     setCard('login');
-  };
-
-  const handleLogin = () => {
-    const form = formRef.current;
-
-    if (form === null) {
-      throw new Error('formRef is null');
-    }
-
-    setWaiting(true);
-    submitForm(
-      null,
-      form,
-      '/login',
-      (responseText) => {
-        if (responseText) {
-          setWaiting(false);
-          window.location.assign(responseText);
-        }
-      },
-      (err) => {
-        setWaiting(false);
-        setErrors({ ...defaultErrors, ...err });
-      },
-    );
   };
 
   const requestResetLink: React.MouseEventHandler = (event) => {
@@ -87,7 +75,9 @@ const Login: React.FC<PropsType> = ({
     case 'intro':
       title = 'Sign In';
       panel = (
-        <IntroPanel />
+        <IntroPanel
+          onSignInWithEmailClick={handleSignInWithEmail}
+        />
       );
       break;
 
@@ -95,13 +85,16 @@ const Login: React.FC<PropsType> = ({
       title = 'Sign In';
       panel = (
         <LoginPanel
-          ref={formRef}
-          onHide={onHide}
-          onLogin={handleLogin}
           onForgotPasswordClick={handleForgotPasswordClick}
+          onSignUpClick={handleSignUpClick}
           errors={errors}
         />
       );
+      break;
+
+    case 'register':
+      title = 'Sign Up';
+      panel = <RegisterPanel onSignInClick={handleSignInClick} />;
       break;
 
     case 'forgot':

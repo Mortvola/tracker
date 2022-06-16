@@ -2,7 +2,7 @@ import React from 'react';
 import styles from './AvatarButton.module.css';
 
 type PropsType = {
-  avatarUrl: string,
+  avatarUrl: string | null,
   onClick: (event: React.MouseEvent) => void,
 };
 
@@ -12,7 +12,7 @@ const AvatarButton: React.FC<PropsType> = React.forwardRef<HTMLButtonElement, Pr
 }, ref) => (
   <button type="button" className={styles.avatarButton} ref={ref} onClick={onClick}>
     <div className={styles.avatarFrame}>
-      <img src={avatarUrl ?? ''} alt="" className={styles.avatar} />
+      <img src={avatarUrl ?? '/user-svgrepo-com.svg'} alt="" className={styles.avatar} />
     </div>
   </button>
 ));

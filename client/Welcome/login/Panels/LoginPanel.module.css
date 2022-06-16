@@ -1,0 +1,25 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.text-link {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.forgot-password {
+  margin-top: 1rem;
+}
+
+.forgot-password >* {
+  font-size: 12px;
+  display: inline;
+  margin-right: 0.25rem;
+}
+
+.no-account >* {
+  font-size: 12px;
+  display: inline;
+  margin-right: 0.25rem;
+}

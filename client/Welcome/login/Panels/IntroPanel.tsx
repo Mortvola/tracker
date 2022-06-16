@@ -2,7 +2,11 @@ import React from 'react';
 import { Button } from 'react-bootstrap';
 import styles from './IntroPanel.module.css';
 
-const IntroPanel: React.FC = () => {
+type PropsType = {
+  onSignInWithEmailClick: () => void,
+}
+
+const IntroPanel: React.FC<PropsType> = ({ onSignInWithEmailClick }) => {
   const handleGoogleClick = () => {
     window.location.replace('/oauth-redirect/google');
   };
@@ -15,7 +19,7 @@ const IntroPanel: React.FC = () => {
     <div className={styles.layout}>
       <Button variant="outline-dark" onClick={handleGoogleClick}>
         <div>
-          <img src="/btn_google_light_normal_ios.svg" alt="" style={{ height: '2rem', width: '2rem' }} />
+          <img src="/google-svgrepo-com.svg" alt="" style={{ height: '2rem', width: '2rem' }} />
           Sign in with Google
         </div>
       </Button>
@@ -25,11 +29,15 @@ const IntroPanel: React.FC = () => {
           Sign in with Facebook
         </div>
       </Button>
-      <Button variant="outline-dark">
+      <Button variant="outline-dark" onClick={onSignInWithEmailClick}>
         <div>
+          <img src="/email-svgrepo-com.svg" alt="" style={{ height: '2rem', width: '2rem' }} />
           Sign in with Email
         </div>
       </Button>
+      <div className={styles.finePrint}>
+        By signing in with Google, Facebook, or Email, you agree to Hiker Bubbles’s Privacy Policy.
+      </div>
     </div>
   );
 };

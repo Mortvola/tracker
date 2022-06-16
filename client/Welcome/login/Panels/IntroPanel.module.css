@@ -10,3 +10,7 @@ button > div {
   justify-content: center;
   align-items: center;
 }
+
+.fine-print {
+  font-size: 12px;
+}

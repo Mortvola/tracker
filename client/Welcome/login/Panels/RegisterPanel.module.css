@@ -1,0 +1,23 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.layout >button {
+  margin-top: 1rem;
+}
+
+.text-link {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.have-account {
+  margin-top: 1rem;
+}
+
+.have-account >* {
+  font-size: 12px;
+  display: inline;
+  margin-right: 0.25rem;
+}

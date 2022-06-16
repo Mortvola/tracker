@@ -1,78 +1,77 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import React from 'react';
-import { Errors } from '@mortvola/forms';
+import { Errors, FormCheckbox, FormField } from '@mortvola/forms';
+import { Form, Formik } from 'formik';
+import Http from '@mortvola/http';
+import { Button } from 'react-bootstrap';
 import { ErrorsType } from '../submit';
+import styles from './LoginPanel.module.css';
 
 type PropsType = {
-  onHide: () => void,
-  onLogin: () => void,
   onForgotPasswordClick: () => void,
+  onSignUpClick: () => void,
   errors: ErrorsType,
 };
 
-const LoginPanel = React.forwardRef<HTMLFormElement, PropsType>(({
-  onHide,
-  onLogin,
+const LoginPanel: React.FC<PropsType> = ({
   onForgotPasswordClick,
+  onSignUpClick,
   errors,
-}, forwardRef) => (
-  <form ref={forwardRef}>
-    <div className="form-group row">
-      <label htmlFor="username" className="col-md-3 col-form-label text-md-right">Username</label>
+}) => {
+  type FormValues = {
+    email: string,
+    password: string,
+    remember: boolean,
+  }
 
-      <div className="col-md-8">
-        <input type="text" className="form-control" name="username" required autoComplete="username" />
-        <span className="text-danger" role="alert">
-          <Errors errors={errors.username} />
-        </span>
-      </div>
-    </div>
+  type CredentialsProps = {
+    email: string,
+    password: string,
+    remember: boolean,
+  }
 
-    <div className="form-group row">
-      <label htmlFor="loginPassword" className="col-md-3 col-form-label text-md-right">Password</label>
+  const handleSubmit = async (values: FormValues) => {
+    const response = await Http.post<CredentialsProps, string>('/login', {
+      email: values.email,
+      password: values.password,
+      remember: values.remember,
+    });
 
-      <div className="col-md-8">
-        <input type="password" className="form-control" name="password" required autoComplete="current-password" />
-        <span className="text-danger" role="alert">
-          <Errors errors={errors.password} />
-        </span>
-      </div>
-    </div>
+    if (response.ok) {
+      const body = await response.body();
+      window.location.replace(body);
+    }
+  };
 
-    <div className="form-group row">
-      <div className="col-md-8 offset-md-3">
-        <div className="form-check">
-          <input className="form-check-input" type="checkbox" name="remember" />
+  return (
+    <Formik<FormValues>
+      initialValues={{ email: '', password: '', remember: false }}
+      onSubmit={handleSubmit}
+    >
+      <Form className={styles.layout}>
+        <FormField name="email" label="Email:" />
+        <FormField name="password" label="Password:" type="password" />
+        <FormCheckbox name="remember" label="Remember Me" />
 
-          <label className="form-check-label" htmlFor="remember">
-            Remember Me
-          </label>
+        <Button type="submit">Sign In</Button>
+
+        <div className={styles.forgotPassword}>
+          <div>Forgot your password?</div>
+          <div onClick={onForgotPasswordClick} className={styles.textLink}>
+            Reset It
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div className="form-group row mb-0">
-      <div className="col-md-8 offset-md-3">
-        <button type="button" className="btn btn-primary" onClick={onLogin}>
-          Sign In
-        </button>
-        <button type="button" className="btn" onClick={onHide}>Cancel</button>
-
-        <span className="text-danger" role="alert">
-          <Errors errors={errors.general} />
-        </span>
-      </div>
-    </div>
-
-    <div className="form-group row mb-0">
-      <div className="col-md-8 offset-md-3">
-        <div onClick={onForgotPasswordClick} className="text-link">
-          I forgot my password.
+        <div className={styles.noAccount}>
+          <div>Don&apos;t have an account?</div>
+          <div onClick={onSignUpClick} className={styles.textLink}>
+            Sign Up
+          </div>
         </div>
-      </div>
-    </div>
-  </form>
-));
+      </Form>
+    </Formik>
+  );
+};
 
 LoginPanel.displayName = 'LoginPanel';
 

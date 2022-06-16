@@ -17,10 +17,6 @@ export default class UsersController {
      */
     const userDetails = await request.validate({
       schema: schema.create({
-        username: schema.string([
-          rules.trim(),
-          rules.unique({ table: 'users', column: 'username' }),
-        ]),
         email: schema.string([
           rules.trim(),
           rules.normalizeEmail({ allLowercase: true }),
@@ -28,17 +24,15 @@ export default class UsersController {
         ]),
         password: schema.string({ trim: true }, [
           rules.trim(),
-          rules.confirmed(),
+          rules.confirmed('passwordConfirmation'),
         ]),
       }),
       messages: {
-        'username.unique': 'An account with the requested username already exists',
-        'username.required': 'A username is required',
         'email.email': 'A valid email address must be specified',
         'email.required': 'An email address is required',
         'email.unique': 'An account with the requested email address already exists',
         'password.required': 'A password is required',
-        'password_confirmation.confirmed': 'The password confirmation does not match the password',
+        'passwordConfirmation.confirmed': 'The password confirmation does not match the password',
       },
     });
 
@@ -53,7 +47,6 @@ export default class UsersController {
     authentication.fill({
       type: 'email',
       userId: user.id,
-      username: userDetails.username,
       email: userDetails.email,
       password: userDetails.password,
     });
@@ -110,20 +103,22 @@ export default class UsersController {
       }
     }
 
-    logger.error(`Invalid payload "${payload.id}" in token for user ${authentication.username}`);
+    logger.error(`Invalid payload "${payload.id}" in token for user ${authentication.email}`);
 
     return undefined;
   }
 
-  public async login({ auth, request, response }: HttpContextContract) : Promise<void> {
+  public async login({
+    auth, request, response, session,
+  }: HttpContextContract) : Promise<void> {
     const credentials = await request.validate({
       schema: schema.create({
-        username: schema.string([rules.trim()]),
+        email: schema.string([rules.trim()]),
         password: schema.string([rules.trim()]),
-        remember: schema.string.optional([rules.trim()]),
+        remember: schema.boolean.optional([rules.trim()]),
       }),
       messages: {
-        'username.required': 'A username is required',
+        'email.required': 'An email address is required',
         'password.required': 'A password is required',
       },
     });
@@ -133,15 +128,26 @@ export default class UsersController {
     let responseData: unknown = JSON.stringify('/home');
 
     try {
-      await auth.attempt(credentials.username, credentials.password, credentials.remember === 'on');
+      await auth.attempt(credentials.email, credentials.password, credentials.remember);
+
+      if (auth.user === undefined) {
+        throw new Exception('user id not set');
+      }
+
+      const authentication = await Authentication.query()
+        .where('type', 'email')
+        .andWhere('userId', auth.user?.id ?? -1)
+        .firstOrFail();
+
+      session.put('authenticationId', authentication.id);
     }
     catch (error) {
       if (error.code === 'E_INVALID_AUTH_UID' || error.code === 'E_INVALID_AUTH_PASSWORD') {
         response.status(422);
         responseData = {
           errors: [
-            { field: 'username', message: 'The username or password does not match our records.' },
-            { field: 'password', message: 'The username or password does not match our records.' },
+            { field: 'email', message: 'The email or password does not match our records.' },
+            { field: 'password', message: 'The email or password does not match our records.' },
           ],
         };
       }

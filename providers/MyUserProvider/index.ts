@@ -5,19 +5,8 @@ import type {
   UserProviderContract,
   ProviderUserContract,
 } from '@ioc:Adonis/Addons/Auth';
-import Database from '@ioc:Adonis/Lucid/Database';
 import User from 'App/Models/User';
-
-/**
- * Shape of the user object returned by the "MyUserProvider"
- * class. Feel free to change the properties as you want
- */
-export type Authentication = {
-  userId: number,
-  email: string | null,
-  password: string | null,
-  rememberMeToken: string | null,
-}
+import Authentication from 'App/Models/Authentication';
 
 /**
  * The shape of configuration accepted by the MyUserProvider.
@@ -58,9 +47,8 @@ class ProviderUser implements ProviderUserContract<User> {
       throw new Error('Cannot verify password for non-existing user');
     }
 
-    const authentication = await Database.query<Authentication>()
-      .from('authentications')
-      .where('user_id', this.user.id)
+    const authentication = await Authentication.query()
+      .where('userId', this.user.id)
       .andWhere('type', 'email')
       .firstOrFail();
 
@@ -93,11 +81,16 @@ export class MyUserProvider implements UserProviderContract<User> {
       throw new Error('user id not set');
     }
 
-    await Database.query<Authentication>()
-      .from('authentications')
-      .where('user_id', id)
+    const authentication = await Authentication.query()
+      .where('userId', id)
       .andWhere('type', 'email')
-      .update({ remember_me_token: user.getRememberMeToken() });
+      .firstOrFail();
+
+    authentication.merge({
+      rememberMeToken: user.getRememberMeToken(),
+    });
+
+    await authentication.save();
   }
 
   public async findById(id: string | number) {
@@ -107,16 +100,20 @@ export class MyUserProvider implements UserProviderContract<User> {
   }
 
   public async findByUid(uidValue: string) {
-    const user = await User.findByOrFail('email', uidValue);
+    const authentication = await Authentication.query()
+      .where('type', 'email')
+      .andWhere('email', uidValue)
+      .firstOrFail();
+
+    const user = await User.findOrFail(authentication.userId);
 
     return this.getUserFor(user || null);
   }
 
   public async findByRememberMeToken(userId: string | number, token: string) {
-    const authentication = await Database.query<Authentication>()
-      .from('authentications')
-      .where('user_id', userId)
-      .andWhere('remember_me_token', token)
+    const authentication = await Authentication.query()
+      .where('userId', userId)
+      .andWhere('rememberMeToken', token)
       .firstOrFail();
 
     const user = await User.findOrFail(authentication.userId);

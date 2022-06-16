@@ -34,9 +34,6 @@ export default class Authentication extends BaseModel {
   public providerAccessToken: string | null;
 
   @column()
-  public username: string | null;
-
-  @column()
   public email: string | null;
 
   @column()

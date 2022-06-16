@@ -61,7 +61,6 @@ Route.get('/home', async ({
   }
 
   const props = {
-    username: '',
     mapApiKey: Env.get('MAP_API_KEY'),
     avatarUrl: authentication.avatarUrl,
   };
