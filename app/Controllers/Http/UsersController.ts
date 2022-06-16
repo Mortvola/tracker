@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 import { Exception } from '@adonisjs/core/build/standalone';
 import { FeedResponse, PointResponse } from 'Common/ResponseTypes';
 import Authentication from 'App/Models/Authentication';
+import Database from '@ioc:Adonis/Lucid/Database';
 
 export default class UsersController {
   public async register({ request, response }: HttpContextContract) : Promise<string> {
@@ -233,5 +234,33 @@ export default class UsersController {
         pick: ['gpsFeed', 'feedPassword'],
       },
     }) as { gpsFeed: string, feedPassword: string };
+  }
+
+  public async delete({
+    auth,
+  }: HttpContextContract): Promise<void> {
+    const { user } = auth;
+
+    if (!user) {
+      throw new Exception('user not set');
+    }
+
+    const trx = await Database.transaction();
+
+    try {
+      user.useTransaction(trx);
+
+      const authentications = await Authentication.query({ client: trx })
+        .where('userId', user.id);
+
+      await Promise.all(authentications.map((a) => a.delete));
+      await user.delete();
+
+      await trx.commit();
+    }
+    catch (error) {
+      trx.rollback();
+      throw error;
+    }
   }
 }

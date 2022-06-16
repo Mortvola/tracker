@@ -92,6 +92,7 @@ Route.group(() => {
     Route.put('/feed', 'UsersController.setFeed');
     Route.get('/location', 'UsersController.getLocation');
     Route.post('/feed-test', 'UsersController.feedTest');
+    Route.delete('/account', 'UsersController.delete');
   })
     .middleware('auth');
 
