@@ -1,9 +1,10 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
-import { FormField } from '@mortvola/forms';
+import { FormField, setFormErrors } from '@mortvola/forms';
 import Http from '@mortvola/http';
-import { Form, Formik } from 'formik';
+import { Form, Formik, FormikHelpers } from 'formik';
 import React from 'react';
 import { Button } from 'react-bootstrap';
+import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
 import styles from './RegisterPanel.module.css';
 import { NextPanelHandler } from './types';
 
@@ -18,24 +19,32 @@ const RegisterPanel: React.FC<PropsType> = ({ onNext }) => {
     passwordConfirmation: string,
   };
 
-  const handleSubmit = async (values: FormValues) => {
+  const handleSubmit = async (
+    values: FormValues,
+    helpers: FormikHelpers<FormValues>,
+  ) => {
     type RegisterProps = {
       email: string,
       password: string,
       passwordConfirmation: string,
     }
 
-    const response = await Http.post<RegisterProps, string>('/register', {
+    const response = await Http.post<RegisterProps, ErrorResponse>('/register', {
       email: values.email,
       password: values.password,
       passwordConfirmation: values.passwordConfirmation,
     });
 
-    // if (response.ok) {
-    //   const body = await response.body();
+    if (response.ok) {
+      onNext('verify-email');
+    }
+    else {
+      const body = await response.body();
 
-    //   window.location.replace(body);
-    // }
+      if (isErrorResponse(body) && body.errors) {
+        setFormErrors(helpers.setErrors, body.errors);
+      }
+    }
   };
 
   return (

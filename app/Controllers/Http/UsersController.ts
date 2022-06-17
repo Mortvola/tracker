@@ -30,9 +30,12 @@ export default class UsersController {
             },
           }),
         ]),
-        password: schema.string({ trim: true }, [
+        password: schema.string([
           rules.trim(),
           rules.confirmed('passwordConfirmation'),
+        ]),
+        passwordConfirmation: schema.string([
+          rules.trim(),
         ]),
       }),
       messages: {
@@ -40,6 +43,7 @@ export default class UsersController {
         'email.required': 'An email address is required',
         'email.unique': 'An account with the requested email address already exists',
         'password.required': 'A password is required',
+        'passwordConfirmation.required': 'A password confirmation is required',
         'passwordConfirmation.confirmed': 'The password confirmation does not match the password',
       },
     });
@@ -57,19 +61,50 @@ export default class UsersController {
       userId: user.id,
       email: userDetails.email,
       password: userDetails.password,
+      emailVerificationStatus: 'unverified',
     });
+
     await authentication.save();
 
+    this.sendWelcomeEmail(authentication);
+  }
+
+  private async sendWelcomeEmail(authentication: Authentication) {
     Mail.send((message) => {
+      if (!authentication.email) {
+        throw new Exception('email address not set');
+      }
+
       message
         .from(Env.get('MAIL_FROM_ADDRESS') as string, Env.get('MAIL_FROM_NAME') as string)
-        .to(userDetails.email)
+        .to(authentication.email)
         .subject('Welcome to Hiker Bubbles!')
         .htmlView('emails/welcome', {
           url: authentication.getEmailVerificationLink(),
           expires: Env.get('TOKEN_EXPIRATION'),
         });
     });
+  }
+
+  public async resendWelcomeEmail({ request }: HttpContextContract) {
+    const requestData = await request.validate({
+      schema: schema.create({
+        email: schema.string([
+          rules.trim(),
+          rules.normalizeEmail({ allLowercase: true }),
+        ]),
+      }),
+    });
+
+    const authentication = await Authentication.query()
+      .where('type', 'email')
+      .andWhere('emailVerificationStatus', 'unverified')
+      .andWhere('email', requestData.email)
+      .first();
+
+    if (authentication) {
+      this.sendWelcomeEmail(authentication);
+    }
   }
 
   public async verifyEmail({
@@ -256,10 +291,18 @@ export default class UsersController {
       if (error.code === 'E_INVALID_AUTH_UID' || error.code === 'E_INVALID_AUTH_PASSWORD') {
         response.status(422);
         return {
+          code: 'E_FORM_ERRORS',
           errors: [
             { field: 'email', message: 'The email address or password does not match our records.' },
             { field: 'password', message: 'The email address or password does not match our records.' },
           ],
+        };
+      }
+
+      if (error.code === 'E_EMAIL_NOT_VERIFIED') {
+        response.status(422);
+        return {
+          code: error.code,
         };
       }
 

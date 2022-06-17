@@ -28,7 +28,7 @@ const ForgotPasswordPanel: React.FC<PropsType> = ({ onNext }) => {
     else {
       const body = await response.body();
 
-      if (isErrorResponse(body)) {
+      if (isErrorResponse(body) && body.errors) {
         setFormErrors(helpers.setErrors, body.errors);
       }
     }

@@ -7,6 +7,7 @@ import type {
 } from '@ioc:Adonis/Addons/Auth';
 import User from 'App/Models/User';
 import Authentication from 'App/Models/Authentication';
+import { Exception } from '@adonisjs/core/build/standalone';
 
 /**
  * The shape of configuration accepted by the MyUserProvider.
@@ -55,6 +56,10 @@ class ProviderUser implements ProviderUserContract<User> {
     if (authentication) {
       if (!authentication.password) {
         throw new Error('Password is not set');
+      }
+
+      if (authentication.emailVerificationStatus !== 'verified') {
+        throw new Exception('email not verified', 400, 'E_EMAIL_NOT_VERIFIED');
       }
 
       return this.hash.verify(authentication.password, plainPassword);

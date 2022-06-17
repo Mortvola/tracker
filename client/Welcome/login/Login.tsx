@@ -7,6 +7,9 @@ import ResetEmailSentPanel from './Panels/ResetEmailSentPanel';
 import RegisterPanel from './Panels/RegisterPanel';
 import Waiting from './Waiting';
 import { PanelTypes } from './Panels/types';
+import VerifyEmailPanel from './Panels/VerifyEmailPanel';
+import UnverifiedEmailPanel from './Panels/UnverifiedEmailPanel';
+import { LoginContext } from './Context';
 
 type PropsType = {
   show: boolean,
@@ -65,6 +68,16 @@ const Login: React.FC<PropsType> = ({
       );
       break;
 
+    case 'verify-email':
+      title = 'Verify Email';
+      panel = <VerifyEmailPanel onNext={handleNext} />;
+      break;
+
+    case 'unverified-email':
+      title = 'Unverified Email';
+      panel = <UnverifiedEmailPanel onNext={handleNext} />;
+      break;
+
     default:
   }
 
@@ -78,7 +91,9 @@ const Login: React.FC<PropsType> = ({
         <Modal.Title>{title}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {panel}
+        <LoginContext>
+          {panel}
+        </LoginContext>
         <Waiting show={waiting} />
       </Modal.Body>
     </Modal>

@@ -9,6 +9,7 @@ import { Button } from 'react-bootstrap';
 import styles from './LoginPanel.module.css';
 import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
 import { NextPanelHandler } from './types';
+import { useStore } from '../Context';
 
 type PropsType = {
   onNext: NextPanelHandler,
@@ -17,6 +18,8 @@ type PropsType = {
 const LoginPanel: React.FC<PropsType> = ({
   onNext,
 }) => {
+  const store = useStore();
+
   type FormValues = {
     email: string,
     password: string,
@@ -33,6 +36,8 @@ const LoginPanel: React.FC<PropsType> = ({
     values: FormValues,
     helpers: FormikHelpers<FormValues>,
   ) => {
+    store.email = values.email;
+
     const response = await Http.post<CredentialsProps, void | ErrorResponse>('/login', {
       email: values.email,
       password: values.password,
@@ -46,7 +51,16 @@ const LoginPanel: React.FC<PropsType> = ({
       const body = await response.body();
 
       if (isErrorResponse(body)) {
-        setFormErrors(helpers.setErrors, body.errors);
+        if (body.code === 'E_FORM_ERRORS') {
+          if (!body.errors) {
+            throw new Error('errors not set');
+          }
+
+          setFormErrors(helpers.setErrors, body.errors);
+        }
+        else if (body.code === 'E_EMAIL_NOT_VERIFIED') {
+          onNext('unverified-email');
+        }
       }
     }
   };

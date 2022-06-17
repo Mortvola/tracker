@@ -69,6 +69,7 @@ Route.get('/home', async ({
 }).middleware('auth');
 
 Route.post('/register', 'UsersController.register');
+Route.post('/register/resend', 'UsersController.resendWelcomeEmail');
 Route.get('/verify-email/:token/:id', 'UsersController.verifyEmail');
 Route.post('/login', 'UsersController.login');
 Route.post('/logout', 'UsersController.logout');

@@ -7,11 +7,16 @@ export interface Error {
 }
 
 export interface ErrorResponse {
-  errors: Error[];
+  code: 'E_FORM_ERRORS' | 'E_EMAIL_NOT_VERIFIED',
+  errors?: Error[];
 }
 
 export const isErrorResponse = (r: unknown): r is ErrorResponse => (
-  (r as ErrorResponse).errors !== undefined
+  (r as ErrorResponse).code !== undefined
+);
+
+export const isFormErrorResponse = (r: unknown): r is ErrorResponse => (
+  (r as ErrorResponse).code === 'E_FORM_ERRORS'
 );
 
 export type Point = {
