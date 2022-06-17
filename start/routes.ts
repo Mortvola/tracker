@@ -82,7 +82,7 @@ Route.get('/oauth-redirect/:provider', 'OAuthsController.redirect');
 Route.get('/oauth-callback/:provider', 'OAuthsController.handleOauth2');
 
 Route.post('/password/email', 'UsersController.forgotPassword');
-Route.get('/password/reset/:id/:token', 'UsersController.resetPassword');
+Route.get('/password/reset/:token/:id', 'UsersController.resetPassword');
 Route.post('/password/update', 'UsersController.updatePassword').as('updatePassword');
 Route.post('/password/change', 'UsersController.changePassword');
 

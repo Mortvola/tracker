@@ -5,12 +5,13 @@ import { Form, Formik } from 'formik';
 import React from 'react';
 import { Button } from 'react-bootstrap';
 import styles from './RegisterPanel.module.css';
+import { NextPanelHandler } from './types';
 
 type PropsType = {
-  onSignInClick: () => void,
+  onNext: NextPanelHandler,
 }
 
-const RegisterPanel: React.FC<PropsType> = ({ onSignInClick }) => {
+const RegisterPanel: React.FC<PropsType> = ({ onNext }) => {
   type FormValues = {
     email: string,
     password: string,
@@ -30,11 +31,11 @@ const RegisterPanel: React.FC<PropsType> = ({ onSignInClick }) => {
       passwordConfirmation: values.passwordConfirmation,
     });
 
-    if (response.ok) {
-      const body = await response.body();
+    // if (response.ok) {
+    //   const body = await response.body();
 
-      window.location.replace(body);
-    }
+    //   window.location.replace(body);
+    // }
   };
 
   return (
@@ -65,7 +66,7 @@ const RegisterPanel: React.FC<PropsType> = ({ onSignInClick }) => {
 
         <div className={styles.haveAccount}>
           <div>Already have an account?</div>
-          <div onClick={onSignInClick} className={styles.textLink}>
+          <div onClick={() => onNext('intro')} className={styles.textLink}>
             Sign In
           </div>
         </div>

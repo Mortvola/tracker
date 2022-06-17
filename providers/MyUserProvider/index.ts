@@ -50,13 +50,17 @@ class ProviderUser implements ProviderUserContract<User> {
     const authentication = await Authentication.query()
       .where('userId', this.user.id)
       .andWhere('type', 'email')
-      .firstOrFail();
+      .first();
 
-    if (!authentication.password) {
-      throw new Error('Password is not set');
+    if (authentication) {
+      if (!authentication.password) {
+        throw new Error('Password is not set');
+      }
+
+      return this.hash.verify(authentication.password, plainPassword);
     }
 
-    return this.hash.verify(authentication.password, plainPassword);
+    return false;
   }
 }
 
@@ -103,11 +107,14 @@ export class MyUserProvider implements UserProviderContract<User> {
     const authentication = await Authentication.query()
       .where('type', 'email')
       .andWhere('email', uidValue)
-      .firstOrFail();
+      .first();
 
-    const user = await User.findOrFail(authentication.userId);
+    let user: User | null = null;
+    if (authentication) {
+      user = await User.find(authentication.userId);
+    }
 
-    return this.getUserFor(user || null);
+    return this.getUserFor(user);
   }
 
   public async findByRememberMeToken(userId: string | number, token: string) {

@@ -3,7 +3,7 @@ import { DateTime } from 'luxon';
 export interface Error {
   field: string;
   message: string;
-  rule: string;
+  rule?: string;
 }
 
 export interface ErrorResponse {

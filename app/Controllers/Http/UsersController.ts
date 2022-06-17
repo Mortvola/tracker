@@ -7,12 +7,12 @@ import Mail from '@ioc:Adonis/Addons/Mail';
 import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import { Exception } from '@adonisjs/core/build/standalone';
-import { FeedResponse, PointResponse } from 'Common/ResponseTypes';
+import { ErrorResponse, FeedResponse, PointResponse } from 'Common/ResponseTypes';
 import Authentication from 'App/Models/Authentication';
 import Database from '@ioc:Adonis/Lucid/Database';
 
 export default class UsersController {
-  public async register({ request, response }: HttpContextContract) : Promise<string> {
+  public async register({ request }: HttpContextContract) : Promise<void> {
     /**
      * Validate user details
      */
@@ -21,7 +21,14 @@ export default class UsersController {
         email: schema.string([
           rules.trim(),
           rules.normalizeEmail({ allLowercase: true }),
-          rules.unique({ table: 'users', column: 'email' }),
+          rules.unique({
+            table: 'authentications',
+            column: 'email',
+            caseInsensitive: true,
+            where: {
+              type: 'email',
+            },
+          }),
         ]),
         password: schema.string({ trim: true }, [
           rules.trim(),
@@ -63,30 +70,21 @@ export default class UsersController {
           expires: Env.get('TOKEN_EXPIRATION'),
         });
     });
-
-    response.header('Content-type', 'application/json');
-
-    return JSON.stringify('Your account has been created');
   }
 
   public async verifyEmail({
     params, view, logger,
-  }: HttpContextContract) : Promise<(string | void)> {
-    const user = await User.findOrFail(params.id);
-
-    const authentication = await Authentication.query()
-      .where('userId', user.id)
-      .andWhere('type', 'email')
-      .firstOrFail();
+  }: HttpContextContract): Promise<(string | void)> {
+    const authentication = await Authentication.findOrFail(params.id);
 
     const payload = jwt.verify(
       params.token, authentication.generateSecret(),
     ) as Record<string, unknown>;
 
     if (payload.id === authentication.id) {
-      if (!authentication.activated) {
-        authentication.activated = true;
-        authentication.save();
+      if (authentication.emailVerificationStatus !== 'verified') {
+        authentication.emailVerificationStatus = 'verified';
+        await authentication.save();
 
         return view.render('emailVerified');
       }
@@ -109,9 +107,123 @@ export default class UsersController {
     return undefined;
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  public async forgotPassword({ request }: HttpContextContract) : Promise<void> {
+    const requestData = await request.validate({
+      schema: schema.create({
+        email: schema.string([rules.trim(), rules.normalizeEmail({ allLowercase: true })]),
+      }),
+      messages: {
+        'email.required': 'An email address is required',
+      },
+    });
+
+    const authentication = await Authentication.query()
+      .where('type', 'email')
+      .where('email', requestData.email)
+      .first();
+
+    if (authentication) {
+      Mail.send((message) => {
+        if (!authentication.email) {
+          throw new Exception('email is not set');
+        }
+
+        message
+          .from(Env.get('MAIL_FROM_ADDRESS') as string, Env.get('MAIL_FROM_NAME') as string)
+          .to(authentication.email)
+          .subject('Reset Password Notification')
+          .htmlView('emails/reset-password', {
+            url: authentication.getPasswordResetLink(),
+            expires: Env.get('TOKEN_EXPIRATION'),
+          });
+      });
+    }
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  public async resetPassword({
+    params, view, logger,
+  }: HttpContextContract) : Promise<(string | void)> {
+    const authentication = await Authentication.find(params.id);
+
+    if (authentication) {
+      const payload = jwt.verify(
+        params.token, authentication.generateSecret(),
+      ) as Record<string, unknown>;
+
+      if (payload.id === parseInt(params.id, 10)) {
+        return view.render('reset-password', { authentication, token: params.token });
+      }
+
+      logger.error(`Invalid payload "${payload.id}" in token for user ${authentication.email}`);
+    }
+
+    return undefined;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  public async updatePassword({
+    request,
+    response,
+    view,
+    logger,
+  }: HttpContextContract) : Promise<(string | void)> {
+    const requestData = await request.validate({
+      schema: schema.create({
+        email: schema.string(),
+        password: schema.string(),
+        passwordConfirmation: schema.string(),
+        token: schema.string(),
+      }),
+    });
+
+    const authentication = await Authentication.query()
+      .where('type', 'email')
+      .andWhere('email', requestData.email)
+      .first();
+
+    if (!authentication) {
+      return view.render(
+        'reset-password',
+        { authentication, token: requestData.token, errorMessage: 'The account could not be found.' },
+      );
+    }
+
+    if (requestData.password !== requestData.passwordConfirmation) {
+      return view.render(
+        'reset-password',
+        { authentication, token: requestData.token, errorMessage: 'The passwords do not match.' },
+      );
+    }
+
+    let payload: Record<string, unknown> = { id: null };
+
+    try {
+      payload = jwt.verify(
+        requestData.token, authentication.generateSecret(),
+      ) as Record<string, unknown>;
+    }
+    catch (error) {
+      logger.error(error);
+    }
+
+    if (payload.id !== authentication.id) {
+      return view.render(
+        'reset-password',
+        { authentication, token: requestData.token, errorMessage: 'The token is no longer valid.' },
+      );
+    }
+
+    authentication.password = requestData.password;
+    await authentication.save();
+
+    return response.redirect('/');
+  }
+
   public async login({
     auth, request, response, session,
-  }: HttpContextContract) : Promise<void> {
+  }: HttpContextContract) : Promise<void | ErrorResponse> {
     const credentials = await request.validate({
       schema: schema.create({
         email: schema.string([rules.trim()]),
@@ -123,10 +235,6 @@ export default class UsersController {
         'password.required': 'A password is required',
       },
     });
-
-    response.header('content-type', 'application/json');
-
-    let responseData: unknown = JSON.stringify('/home');
 
     try {
       await auth.attempt(credentials.email, credentials.password, credentials.remember);
@@ -141,23 +249,22 @@ export default class UsersController {
         .firstOrFail();
 
       session.put('authenticationId', authentication.id);
+
+      return undefined;
     }
     catch (error) {
       if (error.code === 'E_INVALID_AUTH_UID' || error.code === 'E_INVALID_AUTH_PASSWORD') {
         response.status(422);
-        responseData = {
+        return {
           errors: [
-            { field: 'email', message: 'The email or password does not match our records.' },
-            { field: 'password', message: 'The email or password does not match our records.' },
+            { field: 'email', message: 'The email address or password does not match our records.' },
+            { field: 'password', message: 'The email address or password does not match our records.' },
           ],
         };
       }
-      else {
-        throw (error);
-      }
-    }
 
-    response.send(responseData);
+      throw (error);
+    }
   }
 
   public async logout({ auth }: HttpContextContract) : Promise<void> {
@@ -253,7 +360,7 @@ export default class UsersController {
       const authentications = await Authentication.query({ client: trx })
         .where('userId', user.id);
 
-      await Promise.all(authentications.map((a) => a.delete));
+      await Promise.all(authentications.map(async (a) => a.delete()));
       await user.delete();
 
       await trx.commit();

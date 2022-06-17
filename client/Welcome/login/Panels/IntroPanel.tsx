@@ -1,12 +1,13 @@
 import React from 'react';
 import { Button } from 'react-bootstrap';
 import styles from './IntroPanel.module.css';
+import { NextPanelHandler } from './types';
 
 type PropsType = {
-  onSignInWithEmailClick: () => void,
+  onNext: NextPanelHandler,
 }
 
-const IntroPanel: React.FC<PropsType> = ({ onSignInWithEmailClick }) => {
+const IntroPanel: React.FC<PropsType> = ({ onNext }) => {
   const handleGoogleClick = () => {
     window.location.replace('/oauth-redirect/google');
   };
@@ -29,7 +30,7 @@ const IntroPanel: React.FC<PropsType> = ({ onSignInWithEmailClick }) => {
           Sign in with Facebook
         </div>
       </Button>
-      <Button variant="outline-dark" onClick={onSignInWithEmailClick}>
+      <Button variant="outline-dark" onClick={() => onNext('login')}>
         <div>
           <img src="/email-svgrepo-com.svg" alt="" style={{ height: '2rem', width: '2rem' }} />
           Sign in with Email

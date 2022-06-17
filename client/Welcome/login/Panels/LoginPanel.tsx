@@ -1,22 +1,21 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import React from 'react';
-import { Errors, FormCheckbox, FormField } from '@mortvola/forms';
-import { Form, Formik } from 'formik';
+import {
+  FormCheckbox, FormField, setFormErrors,
+} from '@mortvola/forms';
+import { Form, Formik, FormikHelpers } from 'formik';
 import Http from '@mortvola/http';
 import { Button } from 'react-bootstrap';
-import { ErrorsType } from '../submit';
 import styles from './LoginPanel.module.css';
+import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
+import { NextPanelHandler } from './types';
 
 type PropsType = {
-  onForgotPasswordClick: () => void,
-  onSignUpClick: () => void,
-  errors: ErrorsType,
+  onNext: NextPanelHandler,
 };
 
 const LoginPanel: React.FC<PropsType> = ({
-  onForgotPasswordClick,
-  onSignUpClick,
-  errors,
+  onNext,
 }) => {
   type FormValues = {
     email: string,
@@ -30,16 +29,25 @@ const LoginPanel: React.FC<PropsType> = ({
     remember: boolean,
   }
 
-  const handleSubmit = async (values: FormValues) => {
-    const response = await Http.post<CredentialsProps, string>('/login', {
+  const handleSubmit = async (
+    values: FormValues,
+    helpers: FormikHelpers<FormValues>,
+  ) => {
+    const response = await Http.post<CredentialsProps, void | ErrorResponse>('/login', {
       email: values.email,
       password: values.password,
       remember: values.remember,
     });
 
     if (response.ok) {
+      window.location.replace('/home');
+    }
+    else {
       const body = await response.body();
-      window.location.replace(body);
+
+      if (isErrorResponse(body)) {
+        setFormErrors(helpers.setErrors, body.errors);
+      }
     }
   };
 
@@ -57,14 +65,14 @@ const LoginPanel: React.FC<PropsType> = ({
 
         <div className={styles.forgotPassword}>
           <div>Forgot your password?</div>
-          <div onClick={onForgotPasswordClick} className={styles.textLink}>
+          <div onClick={() => onNext('forgot')} className={styles.textLink}>
             Reset It
           </div>
         </div>
 
         <div className={styles.noAccount}>
           <div>Don&apos;t have an account?</div>
-          <div onClick={onSignUpClick} className={styles.textLink}>
+          <div onClick={() => onNext('register')} className={styles.textLink}>
             Sign Up
           </div>
         </div>
@@ -72,7 +80,5 @@ const LoginPanel: React.FC<PropsType> = ({
     </Formik>
   );
 };
-
-LoginPanel.displayName = 'LoginPanel';
 
 export default LoginPanel;

@@ -1,12 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Modal } from 'react-bootstrap';
-import { submitForm, defaultErrors } from './submit';
 import LoginPanel from './Panels/LoginPanel';
 import IntroPanel from './Panels/IntroPanel';
 import ForgotPasswordPanel from './Panels/ForgotPasswordPanel';
 import ResetEmailSentPanel from './Panels/ResetEmailSentPanel';
 import RegisterPanel from './Panels/RegisterPanel';
 import Waiting from './Waiting';
+import { PanelTypes } from './Panels/types';
 
 type PropsType = {
   show: boolean,
@@ -17,55 +17,15 @@ const Login: React.FC<PropsType> = ({
   show,
   onHide,
 }) => {
-  type PanelTypes = 'intro' | 'login' | 'forgot' | 'reset' | 'register';
   const [card, setCard] = useState<PanelTypes>('intro');
-  const [resetMessage, setResetMessage] = useState('');
-  const [waiting, setWaiting] = useState(false);
-  const [errors, setErrors] = useState(defaultErrors);
-  const formRef = useRef<HTMLFormElement>(null);
-
-  const handleSignInWithEmail = () => {
-    setCard('login');
-  };
-
-  const handleSignUpClick = () => {
-    setCard('register');
-  };
-
-  const handleSignInClick = () => {
-    setCard('intro');
-  };
-
-  const handleForgotPasswordClick = () => {
-    setCard('forgot');
-  };
-
-  const handleRememberedPasswordClick = () => {
-    setCard('login');
-  };
-
-  const requestResetLink: React.MouseEventHandler = (event) => {
-    const form = formRef.current;
-
-    if (form === null) {
-      throw new Error('formRef is null');
-    }
-
-    setWaiting(true);
-    submitForm(event, form, '/password/email', (responseText) => {
-      setResetMessage(responseText);
-      setCard('reset');
-      setWaiting(false);
-    }, (err) => {
-      setWaiting(false);
-      setErrors({ ...defaultErrors, ...err });
-    });
-  };
+  const [waiting] = useState(false);
 
   const handleExited = () => {
     setCard('intro');
-    setResetMessage('');
-    setErrors(defaultErrors);
+  };
+
+  const handleNext = (next: PanelTypes) => {
+    setCard(next);
   };
 
   let title: string | null = null;
@@ -75,45 +35,33 @@ const Login: React.FC<PropsType> = ({
     case 'intro':
       title = 'Sign In';
       panel = (
-        <IntroPanel
-          onSignInWithEmailClick={handleSignInWithEmail}
-        />
+        <IntroPanel onNext={handleNext} />
       );
       break;
 
     case 'login':
       title = 'Sign In';
       panel = (
-        <LoginPanel
-          onForgotPasswordClick={handleForgotPasswordClick}
-          onSignUpClick={handleSignUpClick}
-          errors={errors}
-        />
+        <LoginPanel onNext={handleNext} />
       );
       break;
 
     case 'register':
       title = 'Sign Up';
-      panel = <RegisterPanel onSignInClick={handleSignInClick} />;
+      panel = <RegisterPanel onNext={handleNext} />;
       break;
 
     case 'forgot':
       title = 'Forgot Password';
       panel = (
-        <ForgotPasswordPanel
-          ref={formRef}
-          onHide={onHide}
-          onRememberedPasswordClick={handleRememberedPasswordClick}
-          requestResetLink={requestResetLink}
-          errors={errors}
-        />
+        <ForgotPasswordPanel onNext={handleNext} />
       );
       break;
 
-    case 'reset':
+    case 'reset-sent':
       title = 'Reset Link';
       panel = (
-        <ResetEmailSentPanel resetMessage={resetMessage} />
+        <ResetEmailSentPanel onNext={handleNext} />
       );
       break;
 

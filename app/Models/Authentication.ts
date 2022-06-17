@@ -87,4 +87,10 @@ export default class Authentication extends BaseModel {
 
     return `${Env.get('APP_URL') as string}/verify-email/${token}/${this.id}`;
   }
+
+  public getPasswordResetLink(): string {
+    const token = this.generateToken();
+
+    return `${Env.get('APP_URL') as string}/password/reset/${token}/${this.id}`;
+  }
 }
