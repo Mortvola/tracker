@@ -50,6 +50,13 @@ const ForgotPasswordPanel: React.FC<PropsType> = ({ onNext }) => {
         </div>
         <FormField name="email" type="email" label="E-Mail Address" autoComplete="email" />
         <Button type="submit">Send Password Reset Link</Button>
+
+        <div className={styles.rememberPassword}>
+          <div>Remember your password?</div>
+          <div onClick={() => onNext('login')} className={styles.textLink}>
+            Sign In
+          </div>
+        </div>
       </Form>
     </Formik>
   );
