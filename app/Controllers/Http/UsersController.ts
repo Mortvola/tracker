@@ -10,6 +10,7 @@ import { Exception } from '@adonisjs/core/build/standalone';
 import { ErrorResponse, FeedResponse, PointResponse } from 'Common/ResponseTypes';
 import Authentication from 'App/Models/Authentication';
 import Database from '@ioc:Adonis/Lucid/Database';
+import FieldErrorReporter from 'App/Validators/Reporters/FieldErrorReporter';
 
 export default class UsersController {
   public async register({ request }: HttpContextContract) : Promise<void> {
@@ -46,6 +47,7 @@ export default class UsersController {
         'passwordConfirmation.required': 'A password confirmation is required',
         'passwordConfirmation.confirmed': 'The password confirmation does not match the password',
       },
+      reporter: FieldErrorReporter,
     });
 
     /**
@@ -94,6 +96,7 @@ export default class UsersController {
           rules.normalizeEmail({ allLowercase: true }),
         ]),
       }),
+      reporter: FieldErrorReporter,
     });
 
     const authentication = await Authentication.query()
@@ -151,6 +154,7 @@ export default class UsersController {
       messages: {
         'email.required': 'An email address is required',
       },
+      reporter: FieldErrorReporter,
     });
 
     const authentication = await Authentication.query()
@@ -211,6 +215,7 @@ export default class UsersController {
         passwordConfirmation: schema.string(),
         token: schema.string(),
       }),
+      reporter: FieldErrorReporter,
     });
 
     const authentication = await Authentication.query()
@@ -269,6 +274,7 @@ export default class UsersController {
         'email.required': 'An email address is required',
         'password.required': 'A password is required',
       },
+      reporter: FieldErrorReporter,
     });
 
     try {
@@ -341,6 +347,7 @@ export default class UsersController {
       messages: {
         'feed.required': 'A Garmin MapShare URL is required',
       },
+      reporter: FieldErrorReporter,
     });
 
     return User.sendLocationRequest(credentials.feed, credentials.password ?? null);
@@ -362,6 +369,7 @@ export default class UsersController {
       messages: {
         'feed.unique': 'This Garmin MapShare URL is currently in use',
       },
+      reporter: FieldErrorReporter,
     });
 
     user.gpsFeed = credentials.feed ?? null;

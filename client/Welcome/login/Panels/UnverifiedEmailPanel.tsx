@@ -24,7 +24,9 @@ const UnverifiedEmailPanel: React.FC<PropsType> = ({ onNext }) => {
   return (
     <div className={styles.layout}>
       <div>
-        We found an account associated with email address X. Email addresses must be
+        We found an account associated with email address
+        <span>{` ${store.email}`}</span>
+        . Email addresses must be
         verified before signing in. If this is your account and you would like us
         to resend the verification email again, click the button below.
       </div>

@@ -14,10 +14,13 @@ const ResetEmailSentPanel: React.FC<PropsType> = ({ onNext }) => (
       Follow the instructions in the email to reset your password.
     </div>
     <Button onClick={() => onNext('login')}>Sign In</Button>
-    <div>
-      If you did not recieve the email, click the button below.
+
+    <div className={styles.noEmail}>
+      <div>Did not receive the email?</div>
+      <div onClick={() => onNext('forgot')} className={styles.textLink}>
+        Resend It
+      </div>
     </div>
-    <Button onClick={() => onNext('forgot')}>Resend the Password Reset Link</Button>
   </div>
 );
 

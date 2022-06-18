@@ -42,7 +42,7 @@ const ForgotPasswordPanel: React.FC<PropsType> = ({ onNext }) => {
       <Form className={styles.layout}>
         <div>
           Enter the email address that is associated with your account below. If we find an account
-          with that email address we will send a reset link to that address.
+          with that email address, we will send a reset link to that address.
         </div>
         <FormField name="email" type="email" label="E-Mail Address" autoComplete="email" />
         <Button type="submit">Send Password Reset Link</Button>

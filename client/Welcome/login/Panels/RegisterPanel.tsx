@@ -3,7 +3,7 @@ import { FormField, setFormErrors } from '@mortvola/forms';
 import Http from '@mortvola/http';
 import { Form, Formik, FormikHelpers } from 'formik';
 import React from 'react';
-import { Button } from 'react-bootstrap';
+import { Button, Spinner } from 'react-bootstrap';
 import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
 import styles from './RegisterPanel.module.css';
 import { NextPanelHandler } from './types';
@@ -56,30 +56,50 @@ const RegisterPanel: React.FC<PropsType> = ({ onNext }) => {
       }}
       onSubmit={handleSubmit}
     >
-      <Form className={styles.layout}>
-        <FormField name="email" label="Email:" />
-        <FormField
-          name="password"
-          label="Password:"
-          type="password"
-          autoComplete="new-password"
-        />
-        <FormField
-          name="passwordConfirmation"
-          label="Password Confirmation:"
-          type="password"
-          autoComplete="new-password"
-        />
+      {
+        ({ isSubmitting }) => (
+          <Form className={styles.layout}>
+            <FormField name="email" label="Email:" />
+            <FormField
+              name="password"
+              label="Password:"
+              type="password"
+              autoComplete="new-password"
+            />
+            <FormField
+              name="passwordConfirmation"
+              label="Password Confirmation:"
+              type="password"
+              autoComplete="new-password"
+            />
 
-        <Button type="submit">Sign Up</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {
+                  isSubmitting
+                    ? (
+                      <>
+                        Signing Up
+                        <Spinner
+                          animation="border"
+                          as="span"
+                          size="sm"
+                          className={styles.spinner}
+                        />
+                      </>
+                    )
+                    : 'Sign Up'
+                }
+            </Button>
 
-        <div className={styles.haveAccount}>
-          <div>Already have an account?</div>
-          <div onClick={() => onNext('intro')} className={styles.textLink}>
-            Sign In
-          </div>
-        </div>
-      </Form>
+            <div className={styles.haveAccount}>
+              <div>Already have an account?</div>
+              <div onClick={() => onNext('intro')} className={styles.textLink}>
+                Sign In
+              </div>
+            </div>
+          </Form>
+        )
+      }
     </Formik>
   );
 };

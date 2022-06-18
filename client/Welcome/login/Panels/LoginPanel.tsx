@@ -5,7 +5,7 @@ import {
 } from '@mortvola/forms';
 import { Form, Formik, FormikHelpers } from 'formik';
 import Http from '@mortvola/http';
-import { Button } from 'react-bootstrap';
+import { Button, Spinner } from 'react-bootstrap';
 import styles from './LoginPanel.module.css';
 import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
 import { NextPanelHandler } from './types';
@@ -70,27 +70,47 @@ const LoginPanel: React.FC<PropsType> = ({
       initialValues={{ email: '', password: '', remember: false }}
       onSubmit={handleSubmit}
     >
-      <Form className={styles.layout}>
-        <FormField name="email" label="Email:" />
-        <FormField name="password" label="Password:" type="password" />
-        <FormCheckbox name="remember" label="Remember Me" />
+      {
+        ({ isSubmitting }) => (
+          <Form className={styles.layout}>
+            <FormField name="email" label="Email:" />
+            <FormField name="password" label="Password:" type="password" />
+            <FormCheckbox name="remember" label="Remember Me" />
 
-        <Button type="submit">Sign In</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {
+                isSubmitting
+                  ? (
+                    <>
+                      Signing In
+                      <Spinner
+                        animation="border"
+                        as="span"
+                        size="sm"
+                        className={styles.spinner}
+                      />
+                    </>
+                  )
+                  : 'Sign In'
+              }
+            </Button>
 
-        <div className={styles.forgotPassword}>
-          <div>Forgot your password?</div>
-          <div onClick={() => onNext('forgot')} className={styles.textLink}>
-            Reset It
-          </div>
-        </div>
+            <div className={styles.forgotPassword}>
+              <div>Forgot your password?</div>
+              <div onClick={() => onNext('forgot')} className={styles.textLink}>
+                Reset It
+              </div>
+            </div>
 
-        <div className={styles.noAccount}>
-          <div>Don&apos;t have an account?</div>
-          <div onClick={() => onNext('register')} className={styles.textLink}>
-            Sign Up
-          </div>
-        </div>
-      </Form>
+            <div className={styles.noAccount}>
+              <div>Don&apos;t have an account?</div>
+              <div onClick={() => onNext('register')} className={styles.textLink}>
+                Sign Up
+              </div>
+            </div>
+          </Form>
+        )
+      }
     </Formik>
   );
 };
