@@ -7,12 +7,15 @@ import { Button } from 'react-bootstrap';
 import styles from './ForgotPasswordPanel.module.css';
 import { isErrorResponse } from '../../../../common/ResponseTypes';
 import { NextPanelHandler } from './types';
+import { useStore } from '../Context';
 
 type PropsType = {
   onNext: NextPanelHandler,
 }
 
 const ForgotPasswordPanel: React.FC<PropsType> = ({ onNext }) => {
+  const store = useStore();
+
   type FormValues = {
     email: string,
   }
@@ -23,6 +26,7 @@ const ForgotPasswordPanel: React.FC<PropsType> = ({ onNext }) => {
     });
 
     if (response.ok) {
+      store.email = values.email;
       onNext('reset-sent');
     }
     else {

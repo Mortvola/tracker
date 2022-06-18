@@ -5,6 +5,7 @@ import { Form, Formik, FormikHelpers } from 'formik';
 import React from 'react';
 import { Button, Spinner } from 'react-bootstrap';
 import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
+import { useStore } from '../Context';
 import styles from './RegisterPanel.module.css';
 import { NextPanelHandler } from './types';
 
@@ -13,6 +14,8 @@ type PropsType = {
 }
 
 const RegisterPanel: React.FC<PropsType> = ({ onNext }) => {
+  const store = useStore();
+
   type FormValues = {
     email: string,
     password: string,
@@ -36,6 +39,7 @@ const RegisterPanel: React.FC<PropsType> = ({ onNext }) => {
     });
 
     if (response.ok) {
+      store.email = values.email;
       onNext('verify-email');
     }
     else {

@@ -21,8 +21,9 @@ const VerifyEmailPanel: React.FC<PropsType> = ({ onNext }) => {
   return (
     <div className={styles.layout}>
       <div className="alert alert-success" role="alert">
-        A link to verify your email address has been sent to the email address
-        you provided. Follow the instructions in the email to confirm your
+        A link to verify your email address has been sent to
+        <span>{` ${store.email}`}</span>
+        . Follow the instructions in the email to confirm your
         email address. Once your email address has been confirmed, click
         the Sign In button below to sign in to your account.
       </div>
