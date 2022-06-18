@@ -23,7 +23,7 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
       const response = await Http.delete('/api/account');
 
       if (response.ok) {
-        window.location.replace('/');
+        window.location.assign('/');
       }
     },
   );
@@ -34,7 +34,7 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
         const response = await Http.post('/logout');
 
         if (response.ok) {
-          window.location.replace('/');
+          window.location.assign('/');
         }
 
         break;

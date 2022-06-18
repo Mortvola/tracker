@@ -9,11 +9,19 @@ type PropsType = {
 
 const IntroPanel: React.FC<PropsType> = ({ onNext }) => {
   const handleGoogleClick = () => {
-    window.location.replace('/oauth-redirect/google');
+    window.location.assign('/oauth-redirect/google');
   };
 
   const handleFacebookClick = () => {
-    window.location.replace('/oauth-redirect/facebook');
+    window.location.assign('/oauth-redirect/facebook');
+  };
+
+  const handlePrivacyPolicyClick = () => {
+    window.open('/privacy-policy', '_blank');
+  };
+
+  const handleTermsOfServiceClick = () => {
+    window.open('/terms-of-service', '_blank');
   };
 
   return (
@@ -37,7 +45,19 @@ const IntroPanel: React.FC<PropsType> = ({ onNext }) => {
         </div>
       </Button>
       <div className={styles.finePrint}>
-        By signing in with Google, Facebook, or Email, you agree to Hiker Bubbles’s Privacy Policy.
+        <span>
+          By signing in with Google, Facebook, or Email, you agree to Hiker Bubbles’s
+        </span>
+        <span onClick={handlePrivacyPolicyClick} className={styles.textLink}>
+          privacy policy
+        </span>
+        <span>
+          and
+        </span>
+        <span onClick={handleTermsOfServiceClick} className={styles.textLink}>
+          terms of service
+        </span>
+        .
       </div>
     </div>
   );

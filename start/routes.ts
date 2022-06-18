@@ -78,6 +78,10 @@ Route.get('/privacy-policy', ({ view }) => (
   view.render('privacy-policy')
 ));
 
+Route.get('/terms-of-service', ({ view }) => (
+  view.render('terms-of-service')
+));
+
 Route.post('/oauth-data-deletion/:provider', 'OAuthsController.dataDelete');
 Route.get('/oauth-redirect/:provider', 'OAuthsController.redirect');
 Route.get('/oauth-callback/:provider', 'OAuthsController.handleOauth2');

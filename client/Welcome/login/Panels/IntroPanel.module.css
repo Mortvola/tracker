@@ -14,3 +14,12 @@ button > div {
 .fine-print {
   font-size: 12px;
 }
+
+.fine-print :not(:first-child) {
+  margin-left: 0.25rem;
+}
+
+.text-link {
+  text-decoration: underline;
+  cursor: pointer;
+}

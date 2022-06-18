@@ -45,7 +45,7 @@ const LoginPanel: React.FC<PropsType> = ({
     });
 
     if (response.ok) {
-      window.location.replace('/home');
+      window.location.assign('/home');
     }
     else {
       const body = await response.body();
