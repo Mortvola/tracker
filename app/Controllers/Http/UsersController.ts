@@ -13,6 +13,34 @@ import Database from '@ioc:Adonis/Lucid/Database';
 import FieldErrorReporter from 'App/Validators/Reporters/FieldErrorReporter';
 
 export default class UsersController {
+  public async get({
+    auth: {
+      user,
+    },
+    session,
+  }: HttpContextContract): Promise<{ id: number, avatarUrl: string | null } | null> {
+    if (user) {
+      const authenticationId = session.get('authenticationId');
+
+      if (authenticationId === undefined) {
+        return null;
+      }
+
+      const authentication = await Authentication.find(authenticationId);
+
+      if (!authentication) {
+        return null;
+      }
+
+      return {
+        id: user.id,
+        avatarUrl: authentication.avatarUrl,
+      };
+    }
+
+    return null;
+  }
+
   public async register({ request }: HttpContextContract) : Promise<void> {
     /**
      * Validate user details

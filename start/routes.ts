@@ -20,53 +20,14 @@
 
 import Route from '@ioc:Adonis/Core/Route';
 import Env from '@ioc:Adonis/Core/Env';
-import { Exception } from '@adonisjs/core/build/standalone';
-import Authentication from 'App/Models/Authentication';
 
-Route.get('/', async ({ view, auth: { user }, response }) => {
-  if (user) {
-    return response.redirect('/home');
-  }
-
+Route.get('/', async ({ view }) => {
   const props = {
     mapApiKey: Env.get('MAP_API_KEY'),
-  };
-
-  return view.render('welcome', { props });
-});
-// todo: add silent auth
-
-Route.get('/home', async ({
-  view,
-  auth: {
-    user,
-  },
-  session,
-  response,
-}) => {
-  if (!user) {
-    throw new Exception('user not set');
-  }
-
-  const authenticationId = session.get('authenticationId');
-
-  if (authenticationId === undefined) {
-    return response.redirect('/');
-  }
-
-  const authentication = await Authentication.find(authenticationId);
-
-  if (!authentication) {
-    return response.redirect('/');
-  }
-
-  const props = {
-    mapApiKey: Env.get('MAP_API_KEY'),
-    avatarUrl: authentication.avatarUrl,
   };
 
   return view.render('home', { props });
-}).middleware('auth');
+});
 
 Route.post('/register', 'UsersController.register');
 Route.post('/register/resend', 'UsersController.resendWelcomeEmail');
@@ -101,6 +62,7 @@ Route.group(() => {
   })
     .middleware('auth');
 
+  Route.get('/user', 'UsersController.get');
   Route.get('/trail/:name', 'TrailsController.get');
   Route.get('/heatmap/:id', 'HeatmapsController.get');
   Route.get('/heatmap-list', 'HeatmapsController.getList');

@@ -13,10 +13,12 @@ import { useStore } from '../Context';
 
 type PropsType = {
   onNext: NextPanelHandler,
+  onLoggedIn: () => void,
 };
 
 const LoginPanel: React.FC<PropsType> = ({
   onNext,
+  onLoggedIn,
 }) => {
   const store = useStore();
 
@@ -45,7 +47,7 @@ const LoginPanel: React.FC<PropsType> = ({
     });
 
     if (response.ok) {
-      window.location.assign('/home');
+      onLoggedIn();
     }
     else {
       const body = await response.body();

@@ -134,7 +134,7 @@ export default class OAuthsController {
         }
       }
 
-      response.redirect('/home');
+      response.redirect('/');
     }
     catch (error) {
       response.redirect('/');

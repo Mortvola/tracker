@@ -14,11 +14,13 @@ import { LoginContext } from './Context';
 type PropsType = {
   show: boolean,
   onHide: () => void,
+  onLoggedIn: () => void,
 }
 
 const Login: React.FC<PropsType> = ({
   show,
   onHide,
+  onLoggedIn,
 }) => {
   const [card, setCard] = useState<PanelTypes>('intro');
   const [waiting] = useState(false);
@@ -45,7 +47,7 @@ const Login: React.FC<PropsType> = ({
     case 'login':
       title = 'Sign In';
       panel = (
-        <LoginPanel onNext={handleNext} />
+        <LoginPanel onNext={handleNext} onLoggedIn={onLoggedIn} />
       );
       break;
 

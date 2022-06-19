@@ -6,11 +6,9 @@
     "dev": "node ace serve --watch",
     "server-build": "node ace build --production",
     "app-build": "webpack --config-name app --env production",
-    "welcome-build": "webpack --config-name welcome --env production",
     "start": "node server.js",
     "dev-server-build": "node ace build",
     "dev-app-build": "webpack --config-name app",
-    "dev-welcome-build": "webpack --config-name welcome",
     "lint": "eslint . --ext=.ts"
   },
   "devDependencies": {

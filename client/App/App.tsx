@@ -2,12 +2,14 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import Http from '@mortvola/http';
 import { Dropdown } from 'react-bootstrap';
+import CookieConsent from 'react-cookie-consent';
 import Map from '../Map/Map';
 import styles from './App.module.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useGarminFeedSettings } from './GarminFeedSettings';
 import AvatarButton from './AvatarButton';
 import { useDeleteConfirmation } from './DeleteConfirmation';
+import Login from './login/Login';
 
 type PropsType = {
   mapApiKey: string,
@@ -27,6 +29,52 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
       }
     },
   );
+  const [showLogin, setShowLogin] = React.useState(false);
+
+  type User = {
+    id: number,
+    avatarUrl: string | null,
+  }
+
+  const [user, setUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      const response = await Http.get<User | null>('/api/user');
+
+      if (response.ok) {
+        const body = await response.body();
+
+        setUser(body);
+      }
+      else {
+        setUser(null);
+      }
+    })();
+  }, []);
+
+  const handleLoginClick = () => {
+    setShowLogin(true);
+  };
+
+  const handleLoginHide = () => {
+    setShowLogin(false);
+  };
+
+  const handleLoggedIn = async () => {
+    const response = await Http.get<User | null>('/api/user');
+
+    if (response.ok) {
+      const body = await response.body();
+
+      setUser(body);
+    }
+    else {
+      setUser(null);
+    }
+
+    setShowLogin(false);
+  };
 
   const handleSelect = async (event: string | null) => {
     switch (event) {
@@ -34,7 +82,7 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
         const response = await Http.post('/logout');
 
         if (response.ok) {
-          window.location.assign('/');
+          setUser(null);
         }
 
         break;
@@ -54,22 +102,38 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
   };
 
   return (
-    <div className={styles.layout}>
-      <div className={styles.toolbar}>
-        <Dropdown onSelect={handleSelect}>
-          <Dropdown.Toggle avatarUrl={avatarUrl} as={AvatarButton} />
-          <Dropdown.Menu>
-            <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
-            <Dropdown.Item eventKey="LOGOUT">Sign Out</Dropdown.Item>
-            <Dropdown.Divider />
-            <Dropdown.Item eventKey="DELETE_ACCOUNT">Delete Account</Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
+    <>
+      <div className={styles.layout}>
+        <div className={styles.toolbar}>
+          {
+            user
+              ? (
+                <Dropdown onSelect={handleSelect}>
+                  <Dropdown.Toggle avatarUrl={user.avatarUrl} as={AvatarButton} />
+                  <Dropdown.Menu>
+                    <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
+                    <Dropdown.Item eventKey="LOGOUT">Sign Out</Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item eventKey="DELETE_ACCOUNT">Delete Account</Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              )
+              : (
+                <div className={styles.toolbar}>
+                  <button type="button" onClick={handleLoginClick}>Sign In</button>
+                </div>
+              )
+          }
+        </div>
+        <Map apiKey={mapApiKey} showLocation={user !== null} />
+        <CookieConsent>
+          This site uses cookies to enhance the user experience.
+        </CookieConsent>
       </div>
-      <Map apiKey={mapApiKey} showLocation />
+      <Login show={showLogin} onHide={handleLoginHide} onLoggedIn={handleLoggedIn} />
       <Settings />
       <DeleteConfirmation />
-    </div>
+    </>
   );
 };
 
