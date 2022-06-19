@@ -380,7 +380,7 @@ export default class UsersController {
           rules.trim(),
           rules.unique({
             table: 'users',
-            column: 'gpsFeed',
+            column: 'gps_feed',
             whereNot: {
               id: user.id,
             },
