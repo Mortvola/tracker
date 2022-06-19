@@ -11,7 +11,7 @@ import { FormModal, FormField, setFormErrors } from '@mortvola/forms';
 import Http from '@mortvola/http';
 import { Button } from 'react-bootstrap';
 import styles from './GarminFeedSettings.module.css';
-import { FeedResponse, isErrorResponse, PointResponse } from '../../common/ResponseTypes';
+import { ErrorResponse, FeedResponse, isErrorResponse, PointResponse } from '../../common/ResponseTypes';
 
 interface ValueType {
   feed: string,
@@ -46,7 +46,7 @@ const GarminAddress: React.FC<GarminAddressProps & FieldInputProps<string>> = ({
 };
 
 const TestButton: React.FC = () => {
-  const { values } = useFormikContext<ValueType>();
+  const { values, setErrors } = useFormikContext<ValueType>();
   const [result, setResult] = React.useState<string | null>(null);
 
   const handleTestClick = async () => {
@@ -58,7 +58,7 @@ const TestButton: React.FC = () => {
     };
 
     try {
-      const response = await Http.post<FeedCredentials, PointResponse>('/api/feed-test', {
+      const response = await Http.post<FeedCredentials, PointResponse | ErrorResponse>('/api/feed-test', {
         feed: values.feed,
         password: values.password,
       });
@@ -93,7 +93,15 @@ const TestButton: React.FC = () => {
         }
       }
       else {
-        setResult('An unexpected error occured');
+        const body = await response.body();
+
+        if (isErrorResponse(body) && body.errors) {
+          setFormErrors(setErrors, body.errors);
+          setResult('');
+        }
+        else {
+          setResult('An unexpected error occured');
+        }
       }
     }
     catch (error) {

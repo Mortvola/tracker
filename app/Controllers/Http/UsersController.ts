@@ -366,14 +366,31 @@ export default class UsersController {
 
   public async feedTest({
     request,
+    auth: {
+      user,
+    },
   }: HttpContextContract): Promise<PointResponse> {
+    if (!user) {
+      throw new Exception('user not set');
+    }
+
     const credentials = await request.validate({
       schema: schema.create({
-        feed: schema.string([rules.trim()]),
+        feed: schema.string([
+          rules.trim(),
+          rules.unique({
+            table: 'users',
+            column: 'gpsFeed',
+            whereNot: {
+              id: user.id,
+            },
+          }),
+        ]),
         password: schema.string.optional([rules.trim()]),
       }),
       messages: {
-        'feed.required': 'A Garmin MapShare URL is required',
+        'feed.required': 'A Garmin MapShare URL is required to test the connection.',
+        'feed.unique': 'The Garmin MapShare address is currently in use by another account.',
       },
       reporter: FieldErrorReporter,
     });
@@ -395,7 +412,7 @@ export default class UsersController {
         password: schema.string.optional([rules.trim()]),
       }),
       messages: {
-        'feed.unique': 'This Garmin MapShare URL is currently in use',
+        'feed.unique': 'This Garmin MapShare URL is currently in use by another acccount',
       },
       reporter: FieldErrorReporter,
     });
