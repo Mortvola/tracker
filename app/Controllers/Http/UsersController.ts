@@ -369,7 +369,8 @@ export default class UsersController {
     auth: {
       user,
     },
-  }: HttpContextContract): Promise<PointResponse> {
+    response,
+  }: HttpContextContract): Promise<unknown> {
     if (!user) {
       throw new Exception('user not set');
     }
@@ -395,7 +396,57 @@ export default class UsersController {
       reporter: FieldErrorReporter,
     });
 
-    return User.sendLocationRequest(credentials.feed, credentials.password ?? null);
+    const result = await User.sendLocationRequest(credentials.feed, credentials.password ?? null);
+
+    switch (result.code) {
+      case 'success':
+        return undefined;
+
+      case 'parse-error':
+        response.status(400);
+        return {
+          code: 'E_FORM_ERRORS',
+          errors: [
+            { field: 'feed', message: 'An error occured parsing the Garmin response' },
+          ],
+        };
+
+      case 'garmin-error':
+        response.status(400);
+        if (result.garminErrorResponse && result.garminErrorResponse.status === 401) {
+          return {
+            code: 'E_FORM_ERRORS',
+            errors: [
+              { field: 'password', message: 'The password may be incorrect' },
+            ],
+          };
+        }
+
+        return {
+          code: 'E_FORM_ERRORS',
+          errors: [
+            { field: 'feed', message: 'An unexpected error was returned from Garmin' },
+          ],
+        };
+
+      case 'empty-response':
+        response.status(400);
+        return {
+          code: 'E_FORM_ERRORS',
+          errors: [
+            { field: 'feed', message: 'The MapShare address may be incorrect or your MapShare may be disabled' },
+          ],
+        };
+
+      default:
+        response.status(400);
+        return {
+          code: 'E_FORM_ERRORS',
+          errors: [
+            { field: 'feed', message: 'An unexpected error has occured' },
+          ],
+        };
+    }
   }
 
   public async setFeed({ auth: { user }, request }: HttpContextContract): Promise<void> {
@@ -407,12 +458,18 @@ export default class UsersController {
       schema: schema.create({
         feed: schema.string.optional([
           rules.trim(),
-          rules.unique({ table: 'users', column: 'gps_feed' }),
+          rules.unique({
+            table: 'users',
+            column: 'gps_feed',
+            whereNot: {
+              id: user.id,
+            },
+          }),
         ]),
         password: schema.string.optional([rules.trim()]),
       }),
       messages: {
-        'feed.unique': 'This Garmin MapShare URL is currently in use by another acccount',
+        'feed.unique': 'This Garmin MapShare URL is currently in use by another account',
       },
       reporter: FieldErrorReporter,
     });

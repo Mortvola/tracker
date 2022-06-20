@@ -4,17 +4,6 @@
   grid-template-rows: max-content;
 }
 
-.test-button-wrapper {
-  display: flex;
-  align-items: center;
-  margin-top: 1rem;
-  column-gap: 1rem;
-}
-
-.test-button {
-  width: max-content;
-}
-
 .url {
   display: flex;
   align-items: center;
