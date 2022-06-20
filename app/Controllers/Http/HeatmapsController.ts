@@ -1,19 +1,19 @@
 /* eslint-disable class-methods-use-this */
 // import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 
-import Heatmap from "App/Models/Heatmap";
-import { HeatmapListResponse, HeatmapResponse } from "Common/ResponseTypes";
+import Heatmap from 'App/Models/Heatmap';
+import { HeatmapListResponse, HeatmapResponse } from 'Common/ResponseTypes';
+import { DateTime } from 'luxon';
 
 export default class HeatmapsController {
   public async get({ params }): Promise<HeatmapResponse> {
-    let heatmap: Heatmap | null;
+    const dateStart = DateTime.fromISO(`${params.year}-01-01`)
+      .plus({ days: parseInt(params.day, 10) });
 
-    if (params.id === 'latest') {
-      heatmap = await Heatmap.query().orderBy('created_at', 'desc').first();
-    }
-    else {
-      heatmap = await Heatmap.find(parseInt(params.id, 10));
-    }
+    const heatmap = await Heatmap.query()
+      .where('date', dateStart.toISODate())
+      .orderBy('createdAt', 'desc')
+      .first();
 
     return heatmap?.points ?? [];
   }

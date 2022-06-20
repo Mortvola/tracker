@@ -3,10 +3,11 @@ import {
   GoogleMap, HeatmapLayer, Marker, Polyline, useJsApiLoader,
 } from '@react-google-maps/api';
 import Http from '@mortvola/http';
+import { DateTime } from 'luxon';
 import Controls from './Controls';
 import styles from './Map.module.css';
 import {
-  HeatmapListResponse, HeatmapResponse, PointResponse, TrailResponse,
+  HeatmapResponse, PointResponse, TrailResponse,
 } from '../../common/ResponseTypes';
 
 export type LocationStatus = 'red' | 'green' | 'yellow';
@@ -29,25 +30,25 @@ type PropsType = {
   showLocation?: boolean,
 }
 
-const Map: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = false }) => {
+const MapWrapper: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = false }) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
     libraries,
   });
 
-  type HeatmapListEntry = {
-    id: number,
-    date: string,
-    map: null | google.maps.LatLng[],
-  };
-
   const [, setMap] = React.useState<google.maps.Map | null>(null);
   const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
-  const [heatmapList, setHeatmaplist] = React.useState<HeatmapListEntry[]>([]);
   const [heatmap, setHeatmap] = React.useState<google.maps.LatLng[]>([]);
-  const [heatmapIndex, setHeatmapIndex] = React.useState<number>(0);
+  const [heatmapDay, setHeatmapDay] = React.useState<number>(
+    DateTime.now().minus({ days: 1 }).diff(DateTime.fromISO('2022-01-01'), 'days').days,
+  );
+  const heatmaps = React.useRef<Map<number, google.maps.LatLng[]>>();
+
+  if (heatmaps.current === undefined) {
+    heatmaps.current = new Map<number, google.maps.LatLng[]>();
+  }
 
   useEffect(() => {
     if (showLocation) {
@@ -104,49 +105,38 @@ const Map: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = fal
 
   React.useEffect(() => {
     (async () => {
-      const response = await Http.get<HeatmapListResponse>('/api/heatmap-list');
-
-      if (response.ok) {
-        const body = await response.body();
-
-        setHeatmaplist(body.map((m) => ({
-          id: m.id,
-          date: m.date,
-          map: null,
-        })));
-
-        setHeatmapIndex(body.length - 1);
+      if (!heatmaps.current) {
+        throw new Error('heatmaps.current is null');
       }
-    })();
-  }, []);
 
-  React.useEffect(() => {
-    (async () => {
-      if (heatmapIndex > 0 && heatmapIndex < heatmapList.length) {
-        const hm = heatmapList[heatmapIndex].map;
+      let hm = heatmaps.current.get(heatmapDay);
 
-        if (hm === null) {
-          const response = await Http.get<HeatmapResponse>(`/api/heatmap/${heatmapList[heatmapIndex].id}`);
+      if (!hm) {
+        const response = await Http.get<HeatmapResponse>(`/api/heatmap/2022/${heatmapDay}`);
 
-          if (response.ok) {
-            const body = await response.json();
+        if (response.ok) {
+          const body = await response.json();
 
-            heatmapList[heatmapIndex].map = body.map((p) => (
-              new google.maps.LatLng(p[1], p[0])
-            ));
+          hm = body.map((p) => (
+            new google.maps.LatLng(p[1], p[0])
+          ));
 
-            setHeatmap(heatmapList[heatmapIndex].map ?? []);
-          }
+          heatmaps.current.set(heatmapDay, hm);
+          setHeatmap(heatmaps.current.get(heatmapDay) ?? []);
         }
         else {
-          setHeatmap(hm);
+          heatmaps.current.set(heatmapDay, []);
+          setHeatmap([]);
         }
       }
+      else {
+        setHeatmap(hm);
+      }
     })();
-  }, [heatmapIndex, heatmapList]);
+  }, [heatmapDay]);
 
   const handleChange = async (value: number) => {
-    setHeatmapIndex(value);
+    setHeatmapDay(value);
   };
 
   const onLoad = React.useCallback((m: google.maps.Map) => {
@@ -156,6 +146,8 @@ const Map: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = fal
   const onUnmount = React.useCallback(() => {
     setMap(null);
   }, []);
+
+  const { days } = DateTime.fromISO('2022-12-31').diff(DateTime.fromISO('2022-01-01'), 'days');
 
   if (isLoaded) {
     return (
@@ -196,11 +188,14 @@ const Map: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = fal
             options={{ dissipating: true, opacity: 1 }}
           />
         </GoogleMap>
+        <div className={styles.date}>
+          {DateTime.fromISO('2022-01-01').plus({ days: heatmapDay }).toISODate()}
+        </div>
         <Controls
           min={0}
-          max={heatmapList.length - 1}
+          max={days}
           onChange={handleChange}
-          value={heatmapIndex}
+          value={heatmapDay}
         />
       </div>
     );
@@ -209,4 +204,4 @@ const Map: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = fal
   return null;
 };
 
-export default Map;
+export default MapWrapper;

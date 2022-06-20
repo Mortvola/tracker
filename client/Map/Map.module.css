@@ -1,5 +1,9 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) max-content;
+  grid-template-rows: minmax(0, 1fr) max-content max-content;
+}
+
+.date {
+  justify-self: center;
 }

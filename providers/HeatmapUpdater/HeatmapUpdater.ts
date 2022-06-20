@@ -42,6 +42,7 @@ class HeatmapUpdater {
 
     const heatmap = new Heatmap();
 
+    heatmap.date = DateTime.now().minus({ days: 1 }).toISODate();
     heatmap.points = points;
 
     heatmap.save();

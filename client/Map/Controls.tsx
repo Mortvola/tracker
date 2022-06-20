@@ -19,7 +19,7 @@ const Controls: React.FC<PropsType> = ({
     if (bar) {
       const rects = bar.getClientRects();
       const pct = (clientX - rects[0].left) / rects[0].width;
-      const v = Math.round((max - min) * pct);
+      const v = Math.min(Math.max(Math.round((max - min) * pct), min), max);
       onChange(v);
     }
   };
@@ -72,7 +72,7 @@ const Controls: React.FC<PropsType> = ({
       >
         <div
           className={styles.progress}
-          style={{ width: `${valueToPercentage(value).toString()}%` }}
+          style={{ left: `calc(${valueToPercentage(value).toString()}% - 0.75rem)` }}
         />
       </div>
     </div>
