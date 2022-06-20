@@ -3,13 +3,14 @@ import { createRoot } from 'react-dom/client';
 import Http from '@mortvola/http';
 import { Dropdown } from 'react-bootstrap';
 import CookieConsent from 'react-cookie-consent';
-import Map from '../Map/Map';
+import Map, { LocationStatus } from '../Map/Map';
 import styles from './App.module.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useGarminFeedSettings } from './GarminFeedSettings';
 import AvatarButton from './AvatarButton';
 import { useDeleteConfirmation } from './DeleteConfirmation';
 import Login from './login/Login';
+import GpsFeedStatus from './GpsFeedStatus';
 
 type PropsType = {
   mapApiKey: string,
@@ -18,6 +19,7 @@ type PropsType = {
 
 const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
   const [Settings, showSettings] = useGarminFeedSettings();
+  const [locationStatus, setLocationStatus] = React.useState<LocationStatus>('yellow');
   const [DeleteConfirmation, handleDeleteClick] = useDeleteConfirmation(
     'Are you sure you want to delete your account?',
     async () => {
@@ -101,6 +103,10 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
     }
   };
 
+  const handleLocationStatus = (status: LocationStatus) => {
+    setLocationStatus(status);
+  };
+
   return (
     <>
       <div className={styles.layout}>
@@ -109,15 +115,18 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
           {
             user
               ? (
-                <Dropdown onSelect={handleSelect}>
-                  <Dropdown.Toggle avatarUrl={user.avatarUrl} as={AvatarButton} />
-                  <Dropdown.Menu>
-                    <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
-                    <Dropdown.Item eventKey="LOGOUT">Sign Out</Dropdown.Item>
-                    <Dropdown.Divider />
-                    <Dropdown.Item eventKey="DELETE_ACCOUNT">Delete Account</Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
+                <div className={styles.iconTray}>
+                  <GpsFeedStatus status={locationStatus} />
+                  <Dropdown onSelect={handleSelect}>
+                    <Dropdown.Toggle avatarUrl={user.avatarUrl} as={AvatarButton} />
+                    <Dropdown.Menu>
+                      <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
+                      <Dropdown.Item eventKey="LOGOUT">Sign Out</Dropdown.Item>
+                      <Dropdown.Divider />
+                      <Dropdown.Item eventKey="DELETE_ACCOUNT">Delete Account</Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </div>
               )
               : (
                 <div className={styles.toolbar}>
@@ -126,7 +135,11 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
               )
           }
         </div>
-        <Map apiKey={mapApiKey} showLocation={user !== null} />
+        <Map
+          apiKey={mapApiKey}
+          showLocation={user !== null}
+          onLocationStatus={handleLocationStatus}
+        />
         <CookieConsent>
           This site uses cookies to enhance the user experience.
         </CookieConsent>

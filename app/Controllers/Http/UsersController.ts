@@ -358,7 +358,9 @@ export default class UsersController {
     }
 
     if (!user.gpsFeed) {
-      throw new Exception('No gps feed set');
+      return {
+        code: 'gps-feed-null',
+      };
     }
 
     return User.sendLocationRequest(user.gpsFeed, user.feedPassword);

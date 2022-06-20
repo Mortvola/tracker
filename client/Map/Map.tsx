@@ -9,6 +9,8 @@ import {
   HeatmapListResponse, HeatmapResponse, PointResponse, TrailResponse,
 } from '../../common/ResponseTypes';
 
+export type LocationStatus = 'red' | 'green' | 'yellow';
+
 const containerStyle = {
   width: '100%',
   height: '100%',
@@ -23,10 +25,11 @@ const libraries: ['visualization'] = ['visualization'];
 
 type PropsType = {
   apiKey: string,
+  onLocationStatus: (status: LocationStatus) => void,
   showLocation?: boolean,
 }
 
-const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
+const Map: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = false }) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
@@ -49,25 +52,41 @@ const Map: React.FC<PropsType> = ({ apiKey, showLocation = false }) => {
   useEffect(() => {
     if (showLocation) {
       (async () => {
-        const response = await Http.get<PointResponse>('/api/location');
+        try {
+          const response = await Http.get<PointResponse>('/api/location');
 
-        if (response.ok) {
-          const body = await response.body();
+          if (response.ok) {
+            const body = await response.body();
 
-          if (body.code === 'success') {
-            if (!body.point) {
-              throw new Error('point is  undefined');
+            if (body.code === 'success') {
+              if (!body.point) {
+                throw new Error('point is  undefined');
+              }
+
+              setLocation({
+                lat: body.point.point[1],
+                lng: body.point.point[0],
+              });
+
+              onLocationStatus('green');
             }
-
-            setLocation({
-              lat: body.point.point[1],
-              lng: body.point.point[0],
-            });
+            else if (body.code === 'gps-feed-null') {
+              onLocationStatus('yellow');
+            }
+            else {
+              onLocationStatus('red');
+            }
           }
+        }
+        catch (error) {
+          onLocationStatus('red');
         }
       })();
     }
-  }, [showLocation]);
+    else {
+      setLocation(null);
+    }
+  }, [onLocationStatus, showLocation]);
 
   useEffect(() => {
     (async () => {

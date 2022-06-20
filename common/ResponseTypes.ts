@@ -27,7 +27,7 @@ export type Point = {
 export type GarminErrorResponse = { status: number, statusText: string };
 
 export type PointResponse = {
-  code: 'success' | 'parse-error' | 'garmin-error' | 'empty-response';
+  code: 'success' | 'parse-error' | 'garmin-error' | 'empty-response' | 'gps-feed-null';
   point?: Point,
   garminErrorResponse?: GarminErrorResponse;
 }
