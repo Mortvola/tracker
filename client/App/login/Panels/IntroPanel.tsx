@@ -46,7 +46,7 @@ const IntroPanel: React.FC<PropsType> = ({ onNext }) => {
       </Button>
       <div className={styles.finePrint}>
         <span>
-          By signing in with Google, Facebook, or Email, you agree to Follow the Herd’s
+          By signing in with Google, Facebook, or Email, you agree to Hiker Bubbles’s
         </span>
         <span onClick={handlePrivacyPolicyClick} className={styles.textLink}>
           privacy policy
