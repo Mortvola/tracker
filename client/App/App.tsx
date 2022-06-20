@@ -111,7 +111,7 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
     <>
       <div className={styles.layout}>
         <div className={styles.toolbar}>
-          <span className={styles.title}>Hiker Bubbles</span>
+          <span className={styles.title}>Follow the Herd</span>
           {
             user
               ? (
