@@ -6,7 +6,5 @@ set -e
 
 rm -f build.zip;
 zip -r build build;
-# to-debertas build.zip
-
 
 ./upload.sh

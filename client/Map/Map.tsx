@@ -7,7 +7,7 @@ import { DateTime } from 'luxon';
 import Controls from './Controls';
 import styles from './Map.module.css';
 import {
-  HeatmapResponse, PointResponse, TrailResponse,
+  HeatmapResponse, TrailResponse,
 } from '../../common/ResponseTypes';
 
 export type LocationStatus = 'red' | 'green' | 'yellow';
@@ -26,11 +26,13 @@ const libraries: ['visualization'] = ['visualization'];
 
 type PropsType = {
   apiKey: string,
-  onLocationStatus: (status: LocationStatus) => void,
-  showLocation?: boolean,
+  location?: { lat: number, lng: number } | null,
 }
 
-const MapWrapper: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocation = false }) => {
+const MapWrapper: React.FC<PropsType> = ({
+  apiKey,
+  location,
+}) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
@@ -38,7 +40,6 @@ const MapWrapper: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocatio
   });
 
   const [, setMap] = React.useState<google.maps.Map | null>(null);
-  const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
   const [heatmap, setHeatmap] = React.useState<google.maps.LatLng[]>([]);
   const [heatmapDay, setHeatmapDay] = React.useState<number>(
@@ -49,45 +50,6 @@ const MapWrapper: React.FC<PropsType> = ({ apiKey, onLocationStatus, showLocatio
   if (heatmaps.current === undefined) {
     heatmaps.current = new Map<number, google.maps.LatLng[]>();
   }
-
-  useEffect(() => {
-    if (showLocation) {
-      (async () => {
-        try {
-          const response = await Http.get<PointResponse>('/api/location');
-
-          if (response.ok) {
-            const body = await response.body();
-
-            if (body.code === 'success') {
-              if (!body.point) {
-                throw new Error('point is  undefined');
-              }
-
-              setLocation({
-                lat: body.point.point[1],
-                lng: body.point.point[0],
-              });
-
-              onLocationStatus('green');
-            }
-            else if (body.code === 'gps-feed-null') {
-              onLocationStatus('yellow');
-            }
-            else {
-              onLocationStatus('red');
-            }
-          }
-        }
-        catch (error) {
-          onLocationStatus('red');
-        }
-      })();
-    }
-    else {
-      setLocation(null);
-    }
-  }, [onLocationStatus, showLocation]);
 
   useEffect(() => {
     (async () => {

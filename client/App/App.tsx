@@ -11,6 +11,7 @@ import AvatarButton from './AvatarButton';
 import { useDeleteConfirmation } from './DeleteConfirmation';
 import Login from './login/Login';
 import GpsFeedStatus from './GpsFeedStatus';
+import { PointResponse } from '../../common/ResponseTypes';
 
 type PropsType = {
   mapApiKey: string,
@@ -54,6 +55,56 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
       }
     })();
   }, []);
+
+  const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
+
+  const locateUser = React.useCallback(async () => {
+    try {
+      const response = await Http.get<PointResponse>('/api/location');
+
+      if (response.ok) {
+        const body = await response.body();
+
+        if (body.code === 'success') {
+          if (!body.point) {
+            throw new Error('point is  undefined');
+          }
+
+          setLocation({
+            lat: body.point.point[1],
+            lng: body.point.point[0],
+          });
+
+          setLocationStatus('green');
+        }
+        else if (body.code === 'gps-feed-null') {
+          setLocation(null);
+          setLocationStatus('yellow');
+        }
+        else {
+          setLocation(null);
+          setLocationStatus('red');
+        }
+      }
+      else {
+        setLocation(null);
+        setLocationStatus('red');
+      }
+    }
+    catch (error) {
+      setLocationStatus('red');
+      setLocation(null);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (user) {
+      locateUser();
+    }
+    else {
+      setLocation(null);
+    }
+  }, [locateUser, user]);
 
   const handleLoginClick = () => {
     setShowLogin(true);
@@ -103,8 +154,8 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
     }
   };
 
-  const handleLocationStatus = (status: LocationStatus) => {
-    setLocationStatus(status);
+  const handleSettingsHide = () => {
+    locateUser();
   };
 
   return (
@@ -137,15 +188,14 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
         </div>
         <Map
           apiKey={mapApiKey}
-          showLocation={user !== null}
-          onLocationStatus={handleLocationStatus}
+          location={location}
         />
         <CookieConsent>
           This site uses cookies to enhance the user experience.
         </CookieConsent>
       </div>
       <Login show={showLogin} onHide={handleLoginHide} onLoggedIn={handleLoggedIn} />
-      <Settings />
+      <Settings onHide={handleSettingsHide} />
       <DeleteConfirmation />
     </>
   );
