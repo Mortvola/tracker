@@ -10,6 +10,7 @@ import styles from './LoginPanel.module.css';
 import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
 import { NextPanelHandler } from './types';
 import { useStore } from '../Context';
+import SubmitButton from '../../SubmitButton';
 
 type PropsType = {
   onNext: NextPanelHandler,
@@ -79,23 +80,7 @@ const LoginPanel: React.FC<PropsType> = ({
             <FormField name="password" label="Password:" type="password" />
             <FormCheckbox name="remember" label="Remember Me" />
 
-            <Button type="submit" disabled={isSubmitting}>
-              {
-                isSubmitting
-                  ? (
-                    <>
-                      Signing In
-                      <Spinner
-                        animation="border"
-                        as="span"
-                        size="sm"
-                        className={styles.spinner}
-                      />
-                    </>
-                  )
-                  : 'Sign In'
-              }
-            </Button>
+            <SubmitButton isSubmitting={isSubmitting} label="Sign In" submitLabel="Signing In" />
 
             <div className={styles.forgotPassword}>
               <div>Forgot your password?</div>

@@ -5,6 +5,7 @@ import { Form, Formik, FormikHelpers } from 'formik';
 import React from 'react';
 import { Button, Spinner } from 'react-bootstrap';
 import { ErrorResponse, isErrorResponse } from '../../../../common/ResponseTypes';
+import SubmitButton from '../../SubmitButton';
 import { useStore } from '../Context';
 import styles from './RegisterPanel.module.css';
 import { NextPanelHandler } from './types';
@@ -77,23 +78,11 @@ const RegisterPanel: React.FC<PropsType> = ({ onNext }) => {
               autoComplete="new-password"
             />
 
-            <Button type="submit" disabled={isSubmitting}>
-              {
-                  isSubmitting
-                    ? (
-                      <>
-                        Signing Up
-                        <Spinner
-                          animation="border"
-                          as="span"
-                          size="sm"
-                          className={styles.spinner}
-                        />
-                      </>
-                    )
-                    : 'Sign Up'
-                }
-            </Button>
+            <SubmitButton
+              isSubmitting={isSubmitting}
+              label="Sign Up"
+              submitLabel="Signing Up"
+            />
 
             <div className={styles.haveAccount}>
               <div>Already have an account?</div>

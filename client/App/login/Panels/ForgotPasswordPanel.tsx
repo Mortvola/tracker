@@ -8,6 +8,7 @@ import styles from './ForgotPasswordPanel.module.css';
 import { isErrorResponse } from '../../../../common/ResponseTypes';
 import { NextPanelHandler } from './types';
 import { useStore } from '../Context';
+import SubmitButton from '../../SubmitButton';
 
 type PropsType = {
   onNext: NextPanelHandler,
@@ -43,21 +44,30 @@ const ForgotPasswordPanel: React.FC<PropsType> = ({ onNext }) => {
       initialValues={{ email: '' }}
       onSubmit={handleSubmit}
     >
-      <Form className={styles.layout}>
-        <div>
-          Enter the email address that is associated with your account below. If we find an account
-          with that email address, we will send a reset link to that address.
-        </div>
-        <FormField name="email" type="email" label="E-Mail Address" autoComplete="email" />
-        <Button type="submit">Send Password Reset Link</Button>
+      {
+        ({ isSubmitting }) => (
+          <Form className={styles.layout}>
+            <div>
+              Enter the email address that is associated with your account below.
+              If we find an account with that email address, we will send a reset
+              link to that address.
+            </div>
+            <FormField name="email" type="email" label="E-Mail Address" autoComplete="email" />
+            <SubmitButton
+              isSubmitting={isSubmitting}
+              label="Send Password Reset Link"
+              submitLabel="Sending Password Reset Link"
+            />
 
-        <div className={styles.rememberPassword}>
-          <div>Remember your password?</div>
-          <div onClick={() => onNext('login')} className={styles.textLink}>
-            Sign In
-          </div>
-        </div>
-      </Form>
+            <div className={styles.rememberPassword}>
+              <div>Remember your password?</div>
+              <div onClick={() => onNext('login')} className={styles.textLink}>
+                Sign In
+              </div>
+            </div>
+          </Form>
+        )
+      }
     </Formik>
   );
 };
