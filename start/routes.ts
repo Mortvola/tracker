@@ -29,11 +29,20 @@ Route.get('/', async ({ view }) => {
   return view.render('home', { props });
 });
 
-Route.post('/register', 'UsersController.register');
-Route.post('/register/resend', 'UsersController.resendWelcomeEmail');
-Route.get('/verify-email/:token/:id', 'UsersController.verifyEmail');
-Route.post('/login', 'UsersController.login');
-Route.post('/logout', 'UsersController.logout');
+Route.post('/register', 'AuthController.register');
+Route.post('/register/resend', 'AuthController.resendWelcomeEmail');
+Route.get('/verify-email/:token/:id', 'AuthController.verifyEmail');
+Route.post('/login', 'AuthController.login');
+Route.post('/logout', 'AuthController.logout');
+
+Route.post('/password/email', 'AuthController.forgotPassword');
+Route.get('/password/reset/:token/:id', 'AuthController.resetPassword');
+Route.post('/password/update', 'AuthController.updatePassword').as('updatePassword');
+Route.post('/password/change', 'AuthController.changePassword');
+
+Route.post('/oauth-data-deletion/:provider', 'OAuthsController.dataDelete');
+Route.get('/oauth-redirect/:provider', 'OAuthsController.redirect');
+Route.get('/oauth-callback/:provider', 'OAuthsController.handleOauth2');
 
 Route.get('/privacy-policy', ({ view }) => (
   view.render('privacy-policy')
@@ -42,15 +51,6 @@ Route.get('/privacy-policy', ({ view }) => (
 Route.get('/terms-of-service', ({ view }) => (
   view.render('terms-of-service')
 ));
-
-Route.post('/oauth-data-deletion/:provider', 'OAuthsController.dataDelete');
-Route.get('/oauth-redirect/:provider', 'OAuthsController.redirect');
-Route.get('/oauth-callback/:provider', 'OAuthsController.handleOauth2');
-
-Route.post('/password/email', 'UsersController.forgotPassword');
-Route.get('/password/reset/:token/:id', 'UsersController.resetPassword');
-Route.post('/password/update', 'UsersController.updatePassword').as('updatePassword');
-Route.post('/password/change', 'UsersController.changePassword');
 
 Route.group(() => {
   Route.group(() => {
