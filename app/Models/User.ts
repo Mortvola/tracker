@@ -28,6 +28,8 @@ export default class User extends BaseModel {
       if (this.gpsFeed) {
         return await User.sendLocationRequest(this.gpsFeed, this.feedPassword);
       }
+
+      return { code: 'gps-feed-null' };
     }
     catch (error) {
       console.log(error);

@@ -18,4 +18,13 @@ export default class Heatmap extends BaseModel {
     prepare: (value: [number, number][]) => JSON.stringify(value),
   })
   public points: [number, number][];
+
+  @column()
+  public offTrail: number;
+
+  @column()
+  public feedNotSetup: number;
+
+  @column()
+  public feedError: number;
 }
