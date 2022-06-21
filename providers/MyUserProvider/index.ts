@@ -103,7 +103,7 @@ export class MyUserProvider implements UserProviderContract<User> {
   }
 
   public async findById(id: string | number) {
-    const user = await User.findOrFail(id);
+    const user = await User.find(id);
 
     return this.getUserFor(user || null);
   }
