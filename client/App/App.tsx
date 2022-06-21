@@ -165,7 +165,7 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
     <>
       <div className={styles.layout}>
         <div className={styles.toolbar}>
-          <span className={styles.title}>Hiker Bubbles</span>
+          <span className={styles.title}>Hiker Heat Map</span>
           {
             user
               ? (

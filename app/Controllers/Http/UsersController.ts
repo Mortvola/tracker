@@ -108,7 +108,7 @@ export default class UsersController {
       message
         .from(Env.get('MAIL_FROM_ADDRESS') as string, Env.get('MAIL_FROM_NAME') as string)
         .to(authentication.email)
-        .subject('Welcome to Hiker Bubbles!')
+        .subject(`Welcome to ${Env.get('MAIL_FROM_NAME')}!`)
         .htmlView('emails/welcome', {
           url: authentication.getEmailVerificationLink(),
           expires: Env.get('TOKEN_EXPIRATION'),
