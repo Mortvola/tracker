@@ -7,7 +7,7 @@ import Mail from '@ioc:Adonis/Addons/Mail';
 import { sha256 } from 'js-sha256';
 import jwt from 'jsonwebtoken';
 import { Exception } from '@adonisjs/core/build/standalone';
-import { ErrorResponse, FeedResponse, PointResponse } from 'Common/ResponseTypes';
+import { ErrorResponse, FeedResponse, PointResponse, UserResponse } from 'Common/ResponseTypes';
 import Authentication from 'App/Models/Authentication';
 import Database from '@ioc:Adonis/Lucid/Database';
 import FieldErrorReporter from 'App/Validators/Reporters/FieldErrorReporter';
@@ -18,7 +18,7 @@ export default class UsersController {
       user,
     },
     session,
-  }: HttpContextContract): Promise<{ id: number, avatarUrl: string | null } | null> {
+  }: HttpContextContract): Promise<UserResponse | null> {
     if (user) {
       const authenticationId = session.get('authenticationId');
 
@@ -33,7 +33,7 @@ export default class UsersController {
       }
 
       return {
-        id: user.id,
+        initialized: user.initialized,
         avatarUrl: authentication.avatarUrl,
       };
     }
@@ -478,6 +478,7 @@ export default class UsersController {
 
     user.gpsFeed = credentials.feed ?? null;
     user.feedPassword = credentials.password ?? null;
+    user.initialized = true;
 
     user.save();
   }

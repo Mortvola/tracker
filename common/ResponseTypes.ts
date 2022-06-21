@@ -39,3 +39,5 @@ export type HeatmapResponse = [number, number][];
 export type TrailResponse = [number, number][][];
 
 export type FeedResponse = { gpsFeed: string, feedPassword: string };
+
+export type UserResponse = { initialized: boolean, avatarUrl: string | null };

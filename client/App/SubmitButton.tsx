@@ -6,17 +6,20 @@ type PropsType = {
   isSubmitting: boolean,
   label: string,
   submitLabel: string,
+  form?: string,
 }
 
 const SubmitButton: React.FC<PropsType> = ({
   isSubmitting = false,
   label,
   submitLabel,
+  form,
 }) => (
   <Button
     variant="primary"
     type="submit"
     disabled={isSubmitting}
+    form={form}
   >
     {
       isSubmitting

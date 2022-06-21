@@ -11,20 +11,20 @@ import AvatarButton from './AvatarButton';
 import { useDeleteConfirmation } from './DeleteConfirmation';
 import Login from './login/Login';
 import GpsFeedStatus from './GpsFeedStatus';
-import { PointResponse } from '../../common/ResponseTypes';
+import { PointResponse, UserResponse } from '../../common/ResponseTypes';
+import { useSetupUserDialog } from './SetupUserDialog';
 
 type PropsType = {
   mapApiKey: string,
-  avatarUrl: string | null,
 }
 
-const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
+const App: React.FC<PropsType> = ({ mapApiKey }) => {
   const [Settings, showSettings] = useGarminFeedSettings();
+  const [UserSetup, showUserSetup] = useSetupUserDialog();
   const [locationStatus, setLocationStatus] = React.useState<LocationStatus>('yellow');
   const [DeleteConfirmation, handleDeleteClick] = useDeleteConfirmation(
     'Are you sure you want to delete your account?',
     async () => {
-      console.log('delete account');
       const response = await Http.delete('/api/account');
 
       if (response.ok) {
@@ -33,17 +33,11 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
     },
   );
   const [showLogin, setShowLogin] = React.useState(false);
+  const [user, setUser] = React.useState<UserResponse | null>(null);
 
-  type User = {
-    id: number,
-    avatarUrl: string | null,
-  }
-
-  const [user, setUser] = React.useState<User | null>(null);
-
-  React.useEffect(() => {
-    (async () => {
-      const response = await Http.get<User | null>('/api/user');
+  const getUser = React.useCallback(
+    async () => {
+      const response = await Http.get<UserResponse | null>('/api/user');
 
       if (response.ok) {
         const body = await response.body();
@@ -53,8 +47,17 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
       else {
         setUser(null);
       }
-    })();
-  }, []);
+    }, []);
+
+  React.useEffect(() => {
+    getUser();
+  }, [getUser]);
+
+  React.useEffect(() => {
+    if (user !== null && !user.initialized) {
+      showUserSetup();
+    }
+  }, [showUserSetup, user]);
 
   const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
 
@@ -115,16 +118,7 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
   };
 
   const handleLoggedIn = async () => {
-    const response = await Http.get<User | null>('/api/user');
-
-    if (response.ok) {
-      const body = await response.body();
-
-      setUser(body);
-    }
-    else {
-      setUser(null);
-    }
+    await getUser();
 
     setShowLogin(false);
   };
@@ -156,6 +150,15 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
 
   const handleSettingsHide = () => {
     locateUser();
+  };
+
+  const handleUserSetupHide = () => {
+    if (user) {
+      setUser({
+        ...user,
+        initialized: true,
+      });
+    }
   };
 
   return (
@@ -196,6 +199,7 @@ const App: React.FC<PropsType> = ({ mapApiKey, avatarUrl }) => {
       </div>
       <Login show={showLogin} onHide={handleLoginHide} onLoggedIn={handleLoggedIn} />
       <Settings onHide={handleSettingsHide} />
+      <UserSetup onHide={handleUserSetupHide} />
       <DeleteConfirmation />
     </>
   );
