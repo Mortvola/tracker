@@ -24,6 +24,9 @@ export default class LoadKml extends BaseCommand {
   @flags.boolean({ alias: 'r', description: 'Replaces the existing data with new data' })
   public replace: boolean;
 
+  @flags.boolean({ alias: 'f', description: 'Outputs file only' })
+  public fileOnly: boolean;
+
   public static settings = {
     /**
      * Set the following value to true, if you want to load the application
@@ -174,30 +177,32 @@ export default class LoadKml extends BaseCommand {
       ];
     }
 
-    await Drive.put('test.json', JSON.stringify(segmentGroups, null, 2));
+    await Drive.put(`${this.trail}.json`, JSON.stringify(segmentGroups));
 
-    if (this.replace) {
-      const trail = await Trail.findBy('name', this.trail);
+    if (!this.fileOnly) {
+      if (this.replace) {
+        const trail = await Trail.findBy('name', this.trail);
 
-      if (trail) {
-        trail.points = segmentGroups;
+        if (trail) {
+          trail.points = segmentGroups;
 
-        console.log('updating trail points');
+          console.log('updating trail points');
 
-        trail.save();
-        return;
+          trail.save();
+          return;
+        }
       }
+
+      const trail = new Trail();
+
+      trail.fill({
+        name: this.trail,
+        points: segmentGroups,
+      });
+
+      console.log('inserting trail points');
+
+      trail.save();
     }
-
-    const trail = new Trail();
-
-    trail.fill({
-      name: this.trail,
-      points: segmentGroups,
-    });
-
-    console.log('inserting trail points');
-
-    trail.save();
   }
 }

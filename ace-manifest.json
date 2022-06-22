@@ -32,6 +32,13 @@
           "type": "boolean",
           "alias": "r",
           "description": "Replaces the existing data with new data"
+        },
+        {
+          "name": "file-only",
+          "propertyName": "fileOnly",
+          "type": "boolean",
+          "alias": "f",
+          "description": "Outputs file only"
         }
       ]
     },

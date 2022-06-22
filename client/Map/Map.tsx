@@ -53,7 +53,7 @@ const MapWrapper: React.FC<PropsType> = ({
 
   useEffect(() => {
     (async () => {
-      const response = await Http.get<TrailResponse>('/api/trail/PCT');
+      const response = await Http.get<TrailResponse>('/PCT.json');
 
       if (response.ok) {
         const body = await response.body();
