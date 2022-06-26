@@ -36,7 +36,7 @@ export default class LocationGet extends BaseCommand {
     const user = await User.findBy('gpsFeed', this.feed);
 
     if (user) {
-      const response = await user.getLocation();
+      const response = await user.getLocation(true);
 
       console.log(JSON.stringify(response));
     }

@@ -23,10 +23,10 @@ export default class User extends BaseModel {
   @column()
   public initialized: boolean;
 
-  public async getLocation(): Promise<PointResponse | null> {
+  public async getLocation(debug = false): Promise<PointResponse | null> {
     try {
       if (this.gpsFeed) {
-        return await User.sendLocationRequest(this.gpsFeed, this.feedPassword);
+        return await User.sendLocationRequest(this.gpsFeed, this.feedPassword, debug);
       }
 
       return { code: 'gps-feed-null' };
@@ -41,6 +41,7 @@ export default class User extends BaseModel {
   public static async sendLocationRequest(
     feed: string,
     password: string | null,
+    debug = false,
   ): Promise<PointResponse> {
     const garminFeed = 'https://share.garmin.com/Feed/Share';
 
@@ -71,6 +72,10 @@ export default class User extends BaseModel {
       }
 
       const body = await response.text();
+
+      if (debug) {
+        console.log(body);
+      }
 
       try {
         const d = await parseStringPromise(body);
