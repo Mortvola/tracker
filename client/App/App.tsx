@@ -135,6 +135,10 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
         break;
       }
 
+      case 'SETUP':
+        setShowSetupDialog(true);
+        break;
+
       case 'SETTINGS':
         showSettings();
         break;
@@ -177,7 +181,11 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
                   <Dropdown onSelect={handleSelect}>
                     <Dropdown.Toggle avatarUrl={user.avatarUrl} as={AvatarButton} />
                     <Dropdown.Menu>
-                      <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings</Dropdown.Item>
+                      {
+                          user !== null && !user.initialized
+                            ? <Dropdown.Item eventKey="SETUP">Setup...</Dropdown.Item>
+                            : <Dropdown.Item eventKey="SETTINGS">Garmin MapShare Settings...</Dropdown.Item>
+                      }
                       <Dropdown.Item eventKey="LOGOUT">Sign Out</Dropdown.Item>
                       <Dropdown.Divider />
                       <Dropdown.Item eventKey="DELETE_ACCOUNT">Delete Account</Dropdown.Item>
@@ -196,7 +204,7 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
           apiKey={mapApiKey}
           location={location}
         />
-        <CookieConsent>
+        <CookieConsent style={{ zIndex: 2000 }}>
           This site uses cookies to enhance the user experience.
         </CookieConsent>
       </div>
