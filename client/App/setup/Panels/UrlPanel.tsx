@@ -31,13 +31,21 @@ const UrlPanel: React.FC<PropsType> = ({
   return (
     <div className={styles.body}>
       <div>
-        Enter the portion of the MapShare URL after &quot;share.garmin.com/&quot;.
+        <p>
+          On the MapShare page you will find your MapShare Address.
+          Enter the portion of the MapShare Address after &quot;share.garmin.com/&quot;.
+        </p>
       </div>
       <div className={styles.inputWrapper}>
         share.garmin.com/
         <input onChange={handleChange} value={url} />
       </div>
-      <img src="/mapshare_url.png" alt="mapshare" style={{ width: '80%' }} />
+      <div>
+        <p>
+          On a mobile device you should see something like this:
+        </p>
+      </div>
+      <img src="/mapshare_url.png" alt="mapshare" className={styles.image} />
       <div className={styles.footer}>
         <Button onClick={handlePrevClick}>Previous</Button>
         <Button onClick={handleNextClick} disabled={url === ''}>Next</Button>

@@ -31,14 +31,21 @@ const PasswordPanel: React.FC<PropsType> = ({
   return (
     <div className={styles.body}>
       <div>
-        If your MapShare is password protected, enter the password below.
-        You can find the password under MapShare Settings.
+        <p>
+          If your MapShare is password protected, enter the password below.
+          You can find the password under MapShare Settings.
+        </p>
       </div>
       <div className={styles.inputWrapper}>
         Password:
         <input onChange={handleChange} value={password} />
       </div>
-      <img src="/mapshare_password.png" alt="mapshare" style={{ width: '80%' }} />
+      <div>
+        <p>
+          On a mobile device you should see something like this:
+        </p>
+      </div>
+      <img src="/mapshare_password.png" alt="mapshare" className={styles.image} />
       <div className={styles.footer}>
         <Button onClick={handlePrevClick}>Previous</Button>
         <Button onClick={handleNextClick}>Next</Button>

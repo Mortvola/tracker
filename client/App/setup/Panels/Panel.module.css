@@ -20,7 +20,8 @@
 .input-wrapper {
   display: flex;
   column-gap: 0.25rem;
-  margin-top: 1rem;
+  /* margin-top: 1rem; */
+  margin-bottom: 1rem;
   width: 100%;
 }
 
@@ -40,4 +41,9 @@
 .intro a {
   padding-left: 0.25rem;
   padding-right: 0.25rem;
+}
+
+.image {
+  width: 80%;
+  align-self: center;
 }
