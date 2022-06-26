@@ -12,7 +12,7 @@ import { useDeleteConfirmation } from './DeleteConfirmation';
 import Login from './login/Login';
 import GpsFeedStatus from './GpsFeedStatus';
 import { PointResponse, UserResponse } from '../../common/ResponseTypes';
-import { useSetupUserDialog } from './SetupUserDialog';
+import SetupUserDialog from './setup/SetupUser';
 
 type PropsType = {
   mapApiKey: string,
@@ -20,7 +20,7 @@ type PropsType = {
 
 const App: React.FC<PropsType> = ({ mapApiKey }) => {
   const [Settings, showSettings] = useGarminFeedSettings();
-  const [UserSetup, showUserSetup] = useSetupUserDialog();
+  const [showSetupDialog, setShowSetupDialog] = React.useState(false);
   const [locationStatus, setLocationStatus] = React.useState<LocationStatus>('yellow');
   const [DeleteConfirmation, handleDeleteClick] = useDeleteConfirmation(
     'Are you sure you want to delete your account?',
@@ -55,9 +55,9 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
 
   React.useEffect(() => {
     if (user !== null && !user.initialized) {
-      showUserSetup();
+      setShowSetupDialog(true);
     }
-  }, [showUserSetup, user]);
+  }, [user]);
 
   const [location, setLocation] = React.useState<{ lat: number, lng: number } | null>(null);
 
@@ -152,12 +152,15 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
     locateUser();
   };
 
-  const handleUserSetupHide = () => {
+  const handleUserSetupFinish = () => {
+    setShowSetupDialog(false);
     if (user) {
       setUser({
         ...user,
         initialized: true,
       });
+
+      locateUser();
     }
   };
 
@@ -199,7 +202,11 @@ const App: React.FC<PropsType> = ({ mapApiKey }) => {
       </div>
       <Login show={showLogin} onHide={handleLoginHide} onLoggedIn={handleLoggedIn} />
       <Settings onHide={handleSettingsHide} />
-      <UserSetup onHide={handleUserSetupHide} />
+      <SetupUserDialog
+        show={showSetupDialog}
+        onHide={() => setShowSetupDialog(false)}
+        onFinish={handleUserSetupFinish}
+      />
       <DeleteConfirmation />
     </>
   );

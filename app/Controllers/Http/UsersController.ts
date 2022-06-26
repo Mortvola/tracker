@@ -98,7 +98,7 @@ export default class UsersController {
         return {
           code: 'E_FORM_ERRORS',
           errors: [
-            { field: 'feed', message: 'An error occured parsing the Garmin response' },
+            { field: 'feed', message: 'An error occured parsing the Garmin response.' },
           ],
         };
 
@@ -108,7 +108,7 @@ export default class UsersController {
           return {
             code: 'E_FORM_ERRORS',
             errors: [
-              { field: 'password', message: 'The password may be incorrect' },
+              { field: 'password', message: 'The password may be incorrect.' },
             ],
           };
         }
@@ -116,7 +116,7 @@ export default class UsersController {
         return {
           code: 'E_FORM_ERRORS',
           errors: [
-            { field: 'feed', message: 'An unexpected error was returned from Garmin' },
+            { field: 'feed', message: 'An unexpected error was returned from Garmin.' },
           ],
         };
 
@@ -125,7 +125,7 @@ export default class UsersController {
         return {
           code: 'E_FORM_ERRORS',
           errors: [
-            { field: 'feed', message: 'The MapShare address may be incorrect or your MapShare may be disabled' },
+            { field: 'feed', message: 'The MapShare address may be incorrect or your MapShare may be disabled.' },
           ],
         };
 
@@ -134,7 +134,7 @@ export default class UsersController {
         return {
           code: 'E_FORM_ERRORS',
           errors: [
-            { field: 'feed', message: 'An unexpected error has occured' },
+            { field: 'feed', message: 'An unexpected error has occured.' },
           ],
         };
     }

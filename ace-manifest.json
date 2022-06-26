@@ -42,6 +42,26 @@
         }
       ]
     },
+    "location:get": {
+      "settings": {
+        "loadApp": true,
+        "stayAlive": false
+      },
+      "commandPath": "./commands/LocationGet",
+      "commandName": "location:get",
+      "description": "",
+      "args": [
+        {
+          "type": "string",
+          "propertyName": "feed",
+          "name": "feed",
+          "required": true,
+          "description": "The name of the GPS feed"
+        }
+      ],
+      "aliases": [],
+      "flags": []
+    },
     "simulate": {
       "settings": {
         "loadApp": true,

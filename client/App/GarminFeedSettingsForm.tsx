@@ -5,11 +5,12 @@ import {
   FormProvider,
 } from 'react-hook-form';
 import {
-  ErrorResponse, FeedResponse, isErrorResponse, PointResponse,
+  FeedResponse, isErrorResponse,
 } from '../../common/ResponseTypes';
 import { FormField } from './FormField';
 import GarminAddress from './GarminAddress';
 import styles from './GarminFeedSettingsForm.module.css';
+import { validateFeed } from './validateFeed';
 
 export type SubmitStates = 'notSubmitting' | 'submitting' | 'submitted';
 
@@ -38,48 +39,6 @@ const GarminFeedSettingsForm: React.FC<PropsType> = ({
       status: '',
     },
   });
-
-  const validateFeed = async (
-    feed?: string,
-    password?: string,
-  ): Promise<boolean | ErrorResponse> => {
-    if (feed) {
-      type FeedCredentials = {
-        feed: string,
-        password?: string,
-      };
-
-      try {
-        const response = await Http.post<FeedCredentials, PointResponse | ErrorResponse>('/api/feed-test', {
-          feed,
-          password,
-        });
-
-        if (response.ok) {
-          return true;
-        }
-
-        const body = await response.body();
-
-        if (isErrorResponse(body)) {
-          return body;
-        }
-      }
-      catch (error) {
-        // Nothing to handle
-      }
-
-      return {
-        code: 'E_FORM_ERRORS',
-        errors: [{
-          field: 'feed',
-          message: 'An unexpected error occured',
-        }],
-      };
-    }
-
-    return true;
-  };
 
   const submitForm: SubmitHandler<FormValues> = async (values) => {
     onSubmit('submitting');
