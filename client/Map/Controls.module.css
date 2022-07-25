@@ -2,6 +2,7 @@
   display: flex;
   height: max-content;
   width: 100%;
+  user-select: none;
 }
 
 .progressBar {
@@ -13,14 +14,12 @@
   height: 1rem;
   width: 100%;
   position: relative;
+  user-select: none;
 }
 
 .bar {
   background-color: lightgray;
-}
-
-.progressBar > button {
-  background-color: lightgray;
+  user-select: none;
 }
 
 .progress {
@@ -30,4 +29,14 @@
   top: -0.25rem;
   background-color: blue;
   border-radius: 50%;
+  cursor: pointer;
+  user-select: none;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
 }

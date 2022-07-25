@@ -75,17 +75,15 @@ const Controls: React.FC<PropsType> = ({
         ref={ref}
         className={styles.progressBar}
       >
-        <button type="button" onClick={handleBackClick}>-</button>
-        <div
-          className={styles.bar}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerMove={handlePointerMove}
-        />
-        <button type="button" onClick={handleForwardClick}>+</button>
+        <div className={styles.button} onClick={handleBackClick}>-</div>
+        <div className={styles.bar} />
+        <div className={styles.button} onClick={handleForwardClick}>+</div>
         <div
           className={styles.progress}
           style={{ left: `calc(${valueToPercentage(value).toString()}% - 0.75rem)` }}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerMove={handlePointerMove}
         />
       </div>
     </div>
