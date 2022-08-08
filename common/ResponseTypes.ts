@@ -41,3 +41,15 @@ export type TrailResponse = [number, number][][];
 export type FeedResponse = { gpsFeed: string, feedPassword: string };
 
 export type UserResponse = { initialized: boolean, avatarUrl: string | null };
+
+export type WildlandFireResponse = {
+  globalId: string,
+  lat: number,
+  lng: number,
+  name: string,
+  discoveredAt: string,
+  modifiedAt: string,
+  incidentTypeCategory: string,
+  incidentSize: number | null,
+  percentContained: number | null,
+}[];

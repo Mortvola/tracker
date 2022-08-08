@@ -66,5 +66,6 @@ Route.group(() => {
   Route.get('/trail/:name', 'TrailsController.get');
   Route.get('/heatmap/:year/:day', 'HeatmapsController.get');
   Route.get('/heatmap-list', 'HeatmapsController.getList');
+  Route.get('/wildland-fires/:year/:day', 'WildlandFiresController.get');
 })
   .prefix('/api');

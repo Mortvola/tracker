@@ -1,5 +1,17 @@
 {
   "commands": {
+    "incidents:update": {
+      "settings": {
+        "loadApp": true,
+        "stayAlive": false
+      },
+      "commandPath": "./commands/IncidentsUpdate",
+      "commandName": "incidents:update",
+      "description": "",
+      "args": [],
+      "aliases": [],
+      "flags": []
+    },
     "load:kml": {
       "settings": {
         "loadApp": true,

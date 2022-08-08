@@ -1,5 +1,6 @@
 /* eslint-disable class-methods-use-this */
 import { ApplicationContract } from '@ioc:Adonis/Core/Application';
+import FireIncidentUpdater from './FireIncidentUpdater';
 import HeatmapUpdater from './HeatmapUpdater/HeatmapUpdater';
 
 export default class AppProvider {
@@ -12,6 +13,11 @@ export default class AppProvider {
     // Register the location updater binding.
     this.app.container.singleton('HeatmapUpdater', () => (
       new HeatmapUpdater()
+    ));
+
+    // Register the location updater binding.
+    this.app.container.singleton('FireIncidentUpdater', () => (
+      new FireIncidentUpdater()
     ));
   }
 
@@ -31,6 +37,10 @@ export default class AppProvider {
     // Importing the HeatmapUpdater will instantiate an instance
     // which will start it running.
     import('@ioc:HeatmapUpdater');
+
+    // Importing the FireIncidentUpdater will instantiate an instance
+    // which will start it running.
+    import('@ioc:FireIncidentUpdater');
   }
 
   public async shutdown() {
