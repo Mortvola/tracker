@@ -93,75 +93,79 @@ const MapWrapper: React.FC<PropsType> = ({
   // }, []);
 
   React.useEffect(() => {
-    (async () => {
-      if (!heatmaps.current) {
-        throw new Error('heatmaps.current is null');
-      }
+    if (isLoaded) {
+      (async () => {
+        if (!heatmaps.current) {
+          throw new Error('heatmaps.current is null');
+        }
 
-      let hm = heatmaps.current.get(day);
+        let hm = heatmaps.current.get(day);
 
-      if (!hm) {
-        const response = await Http.get<HeatmapResponse>(`/api/heatmap/2022/${day}`);
+        if (!hm) {
+          const response = await Http.get<HeatmapResponse>(`/api/heatmap/2022/${day}`);
 
-        if (response.ok) {
-          const body = await response.json();
+          if (response.ok) {
+            const body = await response.json();
 
-          hm = body.map((p) => (
-            new google.maps.LatLng(p[1], p[0])
-          ));
+            hm = body.map((p) => (
+              new google.maps.LatLng(p[1], p[0])
+            ));
 
-          heatmaps.current.set(day, hm);
-          setHeatmap(heatmaps.current.get(day) ?? []);
+            heatmaps.current.set(day, hm);
+            setHeatmap(heatmaps.current.get(day) ?? []);
+          }
+          else {
+            heatmaps.current.set(day, []);
+            setHeatmap([]);
+          }
         }
         else {
-          heatmaps.current.set(day, []);
-          setHeatmap([]);
+          setHeatmap(hm);
         }
-      }
-      else {
-        setHeatmap(hm);
-      }
-    })();
-  }, [day]);
+      })();
+    }
+  }, [day, isLoaded]);
 
   React.useEffect(() => {
-    (async () => {
-      if (!incidents.current) {
-        throw new Error('incidents.current is null');
-      }
+    if (isLoaded) {
+      (async () => {
+        if (!incidents.current) {
+          throw new Error('incidents.current is null');
+        }
 
-      let wf = incidents.current.get(day);
+        let wf = incidents.current.get(day);
 
-      if (!wf) {
-        const response = await Http.get<WildlandFireResponse>(`/api/wildland-fires/2022/${day}`);
+        if (!wf) {
+          const response = await Http.get<WildlandFireResponse>(`/api/wildland-fires/2022/${day}`);
 
-        if (response.ok) {
-          const body = await response.body();
+          if (response.ok) {
+            const body = await response.body();
 
-          wf = body.map((p) => ({
-            id: p.globalId,
-            latlng: new google.maps.LatLng(p.lat, p.lng),
-            name: p.name,
-            discoveredAt: DateTime.fromISO(p.discoveredAt),
-            modifiedAt: DateTime.fromISO(p.modifiedAt),
-            incidentTypeCategory: p.incidentTypeCategory,
-            incidentSize: p.incidentSize,
-            percentContained: p.percentContained,
-          }));
+            wf = body.map((p) => ({
+              id: p.globalId,
+              latlng: new google.maps.LatLng(p.lat, p.lng),
+              name: p.name,
+              discoveredAt: DateTime.fromISO(p.discoveredAt),
+              modifiedAt: DateTime.fromISO(p.modifiedAt),
+              incidentTypeCategory: p.incidentTypeCategory,
+              incidentSize: p.incidentSize,
+              percentContained: p.percentContained,
+            }));
 
-          incidents.current.set(day, wf);
-          setWildlandFires(incidents.current.get(day) ?? []);
+            incidents.current.set(day, wf);
+            setWildlandFires(incidents.current.get(day) ?? []);
+          }
+          else {
+            incidents.current.set(day, []);
+            setHeatmap([]);
+          }
         }
         else {
-          incidents.current.set(day, []);
-          setHeatmap([]);
+          setWildlandFires(wf);
         }
-      }
-      else {
-        setWildlandFires(wf);
-      }
-    })();
-  }, [day]);
+      })();
+    }
+  }, [day, isLoaded]);
 
   const [infoWindowOpen, setInfoWindowOpen] = React.useState<string | null>(null);
   const handleInfoWindowOpen = (id: string | null) => {
