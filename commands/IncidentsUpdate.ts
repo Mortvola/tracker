@@ -103,6 +103,7 @@ export default class IncidentsUpdate extends BaseCommand {
               : null,
             lat: coordinates.y,
             lng: coordinates.x,
+            distance,
           });
         }
       }

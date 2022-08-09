@@ -65,6 +65,7 @@ class IncidentsUpdater {
               : null,
             lat: coordinates.y,
             lng: coordinates.x,
+            distance,
           });
         }
       }

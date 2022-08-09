@@ -12,6 +12,7 @@ export type Incident = {
   incidentSize: number | null,
   percentContained: number | null,
   containmentDateTime: DateTime | null,
+  distance?: number,
 };
 
 export default class WildlandFire extends BaseModel {

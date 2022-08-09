@@ -52,4 +52,5 @@ export type WildlandFireResponse = {
   incidentTypeCategory: string,
   incidentSize: number | null,
   percentContained: number | null,
+  distance?: number,
 }[];

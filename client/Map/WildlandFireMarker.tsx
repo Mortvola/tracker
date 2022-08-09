@@ -11,6 +11,7 @@ export type WildlandFire = {
   incidentTypeCategory: string,
   incidentSize: number | null,
   percentContained: number | null,
+  distance?: number,
 };
 
 type PropsType = {
@@ -56,6 +57,7 @@ const WildlandFireMarker: React.FC<PropsType> = ({
                 <div>{`Category: ${wf.incidentTypeCategory}`}</div>
                 <div>{`Size (acres): ${wf.incidentSize ?? 'not set'}`}</div>
                 <div>{`Containment: ${wf.percentContained ?? 'not set'}`}</div>
+                <div>{`Distance to Trail (miles): ${wf.distance ? (wf.distance / 1609.34).toFixed(1) : 'not set'}`}</div>
               </div>
             </InfoWindow>
           )

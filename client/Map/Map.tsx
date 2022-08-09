@@ -150,6 +150,7 @@ const MapWrapper: React.FC<PropsType> = ({
               incidentTypeCategory: p.incidentTypeCategory,
               incidentSize: p.incidentSize,
               percentContained: p.percentContained,
+              distance: p.distance,
             }));
 
             incidents.current.set(day, wf);
@@ -157,7 +158,7 @@ const MapWrapper: React.FC<PropsType> = ({
           }
           else {
             incidents.current.set(day, []);
-            setHeatmap([]);
+            setWildlandFires([]);
           }
         }
         else {
