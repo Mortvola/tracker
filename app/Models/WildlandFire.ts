@@ -13,6 +13,7 @@ export type Incident = {
   percentContained: number | null,
   containmentDateTime: DateTime | null,
   distance?: number,
+  perimeter?: { rings: [number, number][][]},
 };
 
 export default class WildlandFire extends BaseModel {

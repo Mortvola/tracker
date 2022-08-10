@@ -128,3 +128,36 @@ export const haversineGreatCircleDistance = (
 
   return angle * earthRadius;
 };
+
+export const getExtents = (polyline: [number, number][]) => {
+  let east: number | null = null;
+  let west: number | null = null;
+  let north: number | null = null;
+  let south: number | null = null;
+
+  // eslint-disable-next-line no-restricted-syntax
+  for (const point of polyline) {
+    if (east === null || east < point[0]) {
+      [east] = point;
+    }
+
+    if (west === null || west > point[0]) {
+      [west] = point;
+    }
+
+    if (north === null || north < point[1]) {
+      [, north] = point;
+    }
+
+    if (south === null || south > point[1]) {
+      [, south] = point;
+    }
+  }
+
+  return {
+    east,
+    west,
+    north,
+    south,
+  };
+};

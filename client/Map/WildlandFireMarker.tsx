@@ -12,6 +12,7 @@ export type WildlandFire = {
   incidentSize: number | null,
   percentContained: number | null,
   distance?: number,
+  perimeter?: { rings: google.maps.LatLng[][] },
 };
 
 type PropsType = {

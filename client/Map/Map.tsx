@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  GoogleMap, HeatmapLayer, Marker, Polyline, useJsApiLoader,
+  GoogleMap, HeatmapLayer, Marker, Polygon, Polyline, useJsApiLoader,
 } from '@react-google-maps/api';
 import Http from '@mortvola/http';
 import { DateTime } from 'luxon';
@@ -151,6 +151,15 @@ const MapWrapper: React.FC<PropsType> = ({
               incidentSize: p.incidentSize,
               percentContained: p.percentContained,
               distance: p.distance,
+              perimeter: {
+                rings: p.perimeter
+                  ? p.perimeter.rings.map((r) => (
+                    r.map((r2) => (
+                      new google.maps.LatLng(r2[1], r2[0])
+                    ))
+                  ))
+                  : [],
+              },
             }));
 
             incidents.current.set(day, wf);
@@ -217,6 +226,23 @@ const MapWrapper: React.FC<PropsType> = ({
                 infoWindowOpen={infoWindowOpen === wf.id}
                 setInfoWindowOpen={handleInfoWindowOpen}
               />
+            ))
+          }
+          {
+            wildlandFires.map((wf) => (
+              wf.perimeter
+                ? (
+                  <Polygon
+                    key={wf.id}
+                    paths={wf.perimeter.rings}
+                    options={{
+                      fillColor: '#cf0000',
+                      fillOpacity: 0.25,
+                      strokeColor: '#cf0000',
+                    }}
+                  />
+                )
+                : null
             ))
           }
           {
