@@ -48,7 +48,7 @@ const MapWrapper: React.FC<PropsType> = ({
   );
   const heatmaps = React.useRef<Map<number, google.maps.LatLng[]>>();
   const incidents = React.useRef<Map<number, WildlandFire[]>>();
-  const [wildlandFires, setWildlandFires] = React.useState<WildlandFire[]>([]);
+  const [wildlandFires, setWildlandFires] = React.useState<WildlandFire[] | null>(null);
 
   if (heatmaps.current === undefined) {
     heatmaps.current = new Map<number, google.maps.LatLng[]>();
@@ -136,6 +136,7 @@ const MapWrapper: React.FC<PropsType> = ({
         let wf = incidents.current.get(day);
 
         if (!wf) {
+          setWildlandFires(null);
           const response = await Http.get<WildlandFireResponse>(`/api/wildland-fires/2022/${day}`);
 
           if (response.ok) {
@@ -219,31 +220,52 @@ const MapWrapper: React.FC<PropsType> = ({
               : null
           }
           {
-            wildlandFires.map((wf) => (
-              <WildlandFireMarker
-                key={wf.id}
-                wf={wf}
-                infoWindowOpen={infoWindowOpen === wf.id}
-                setInfoWindowOpen={handleInfoWindowOpen}
-              />
-            ))
-          }
-          {
-            wildlandFires.map((wf) => (
-              wf.perimeter
-                ? (
-                  <Polygon
-                    key={wf.id}
-                    paths={wf.perimeter.rings}
-                    options={{
-                      fillColor: '#cf0000',
-                      fillOpacity: 0.25,
-                      strokeColor: '#cf0000',
-                    }}
-                  />
-                )
-                : null
-            ))
+            wildlandFires
+              ? (
+                <>
+                  {
+                    wildlandFires.map((wf) => (
+                      <WildlandFireMarker
+                        key={wf.id}
+                        wf={wf}
+                        infoWindowOpen={infoWindowOpen === wf.id}
+                        setInfoWindowOpen={handleInfoWindowOpen}
+                      />
+                    ))
+                  }
+                  {
+                    wildlandFires.map((wf) => (
+                      wf.perimeter
+                        ? (
+                          <Polygon
+                            key={wf.id}
+                            paths={wf.perimeter.rings}
+                            options={{
+                              fillColor: '#cf0000',
+                              fillOpacity: 0.25,
+                              strokeColor: '#cf0000',
+                            }}
+                          />
+                        )
+                        : null
+                    ))
+                  }
+                </>
+              )
+              : (
+                <div
+                  style={{
+                    position: 'absolute',
+                    zIndex: 1,
+                    backgroundColor: '#fff',
+                    padding: '0 0.5rem',
+                    bottom: '2px',
+                    left: '2px',
+                  }}
+                >
+                  Loading...
+                </div>
+              )
           }
           {
             trail
