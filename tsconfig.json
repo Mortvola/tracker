@@ -43,7 +43,8 @@
       "@adonisjs/lucid",
       "@adonisjs/auth",
       "@adonisjs/mail",
-      "@adonisjs/ally"
+      "@adonisjs/ally",
+      "@rocketseat/adonis-bull"
     ]
   }
 }

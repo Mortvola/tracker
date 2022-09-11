@@ -1,6 +1,11 @@
 import { DateTime } from 'luxon';
 import { afterFind, BaseModel, column } from '@ioc:Adonis/Lucid/Orm';
-import { getExtents, haversineGreatCircleDistance, nearestPointOnPolyLine } from 'App/Models/Math';
+import {
+  Point2D, getExtents, haversineGreatCircleDistance, nearestPointOnPolyLine,
+  Extents, lineSegmentRectangleIntersect, expandExtents,
+} from 'App/Models/Math';
+
+type Polyline = Point2D[];
 
 export default class Trail extends BaseModel {
   @column({ isPrimary: true })
@@ -16,9 +21,9 @@ export default class Trail extends BaseModel {
   public name: string;
 
   @column({
-    prepare: (value: [number, number][][]) => JSON.stringify(value),
+    prepare: (value: Polyline[]) => JSON.stringify(value),
   })
-  public points: [number, number][][];
+  public points: Polyline[];
 
   @afterFind()
   public static generateExtents(trail: Trail) {
@@ -31,20 +36,22 @@ export default class Trail extends BaseModel {
     for (const trailSegment of trail.points) {
       const extents = getExtents(trailSegment);
 
-      if (extents.east !== null && (east === null || east < extents.east)) {
-        east = extents.east;
-      }
+      if (extents) {
+        if (east === null || east < extents.east) {
+          east = extents.east;
+        }
 
-      if (extents.west !== null && (west === null || west > extents.west)) {
-        west = extents.west;
-      }
+        if (west === null || west > extents.west) {
+          west = extents.west;
+        }
 
-      if (extents.north !== null && (north === null || north < extents.north)) {
-        north = extents.north;
-      }
+        if (north === null || north < extents.north) {
+          north = extents.north;
+        }
 
-      if (extents.south !== null && (south === null || south > extents.south)) {
-        south = extents.south;
+        if (south === null || south > extents.south) {
+          south = extents.south;
+        }
       }
     }
 
@@ -65,20 +72,87 @@ export default class Trail extends BaseModel {
     }
   }
 
-  public extents: { east: number, west: number, north: number, south: number };
+  public extents: Extents;
 
-  public expandedExtents: { east: number, west: number, north: number, south: number };
+  public expandedExtents: Extents;
 
   public expandedBoundsIntersection(
-    east: number, west: number, north: number, south: number,
+    bounds: Extents,
   ): boolean {
-    return this.expandedExtents.west < east && this.expandedExtents.east > west
-      && this.expandedExtents.north > south && this.expandedExtents.south < north;
+    return this.expandedExtents.west < bounds.east && this.expandedExtents.east > bounds.west
+      && this.expandedExtents.north > bounds.south && this.expandedExtents.south < bounds.north;
   }
 
-  public getDistanceToTrail(point: [number, number]) {
+  public getSegmentsWithinExtents(extents: Extents): Polyline[] {
+    const segments: Polyline[] = [];
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const trailSegment of this.points) {
+      let segment: Polyline = [];
+      for (let i = 1; i < trailSegment.length; i += 1) {
+        if (lineSegmentRectangleIntersect(
+          trailSegment[i - 1],
+          trailSegment[i],
+          [extents.west, extents.south],
+          [extents.east, extents.north],
+        )) {
+          if (segment.length === 0) {
+            segment.push(trailSegment[i - 1]);
+          }
+
+          segment.push(trailSegment[i]);
+        }
+        else if (segment.length > 0) {
+          segments.push(segment);
+          segment = [];
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  public getPolylineDistanceToTrail(points: Polyline): number | null {
     let shortestDistance: number | null = null;
-    let closestPoint: [number, number] | null = null;
+    let extents = getExtents(points);
+
+    if (extents && this.expandedBoundsIntersection(extents)) {
+      extents = expandExtents(extents, 0.5);
+
+      let closestTrailPoint: Point2D | null = null;
+      let closestPolylinePoint: Point2D | null = null;
+
+      // Get segments of the trail within the expanded polyline extents
+      const segments = this.getSegmentsWithinExtents(extents);
+
+      segments.forEach((segment) => {
+        points.forEach((point: Point2D) => {
+          const [trailPoint, distance] = nearestPointOnPolyLine(segment, point);
+
+          if (distance && (shortestDistance === null || distance < shortestDistance)) {
+            shortestDistance = distance;
+            closestTrailPoint = trailPoint;
+            closestPolylinePoint = point;
+          }
+        });
+      });
+
+      if (shortestDistance && closestTrailPoint && closestPolylinePoint) {
+        shortestDistance = haversineGreatCircleDistance(
+          closestTrailPoint[1],
+          closestTrailPoint[0],
+          closestPolylinePoint[1],
+          closestPolylinePoint[0],
+        );
+      }
+    }
+
+    return shortestDistance;
+  }
+
+  public getDistanceToTrail(point: Point2D) {
+    let shortestDistance: number | null = null;
+    let closestPoint: Point2D | null = null;
 
     // eslint-disable-next-line no-restricted-syntax
     for (const trailSegment of this.points) {

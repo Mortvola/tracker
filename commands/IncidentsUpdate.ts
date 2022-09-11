@@ -1,4 +1,5 @@
 import { BaseCommand } from '@adonisjs/core/build/standalone';
+import { getExtents } from 'App/Models/Math';
 import { Incident } from 'App/Models/WildlandFire';
 import { DateTime } from 'luxon';
 import fetch from 'node-fetch';
@@ -30,67 +31,76 @@ export default class IncidentsUpdate extends BaseCommand {
     stayAlive: false,
   };
 
-  public static async getObjectIds(): Promise<number[]> {
+  private static async getPerimeter(irwinID: string) {
     const response = await fetch(
-      'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/CY_WildlandFire_Locations_ToDate/FeatureServer/0/query?where=1%3D1&outFields=*&geometry=-125.420%2C29.800%2C-114.873%2C51.089&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnIdsOnly=true&outSR=4326&f=json',
+      `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=irwin_IrwinID%3D%27{${irwinID}}%27&outFields=&outSR=4326&f=json`,
     );
 
     if (response.ok) {
       const body = await response.json();
 
-      return body.objectIds;
+      if (body.features && body.features.length > 0) {
+        return body.features[0].geometry;
+      }
     }
 
-    return [];
+    return null;
   }
 
-  private static async getFeatures(ids: number[]): Promise<any[]> {
-    const url = `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/CY_WildlandFire_Locations_ToDate/FeatureServer/0/query?objectIds=${ids.join()}&outFields=*&outSR=4326&f=json`;
+  public static async getIncidents(
+    trail: any,
+    debug = false,
+  ): Promise<void> {
+    const { default: WildlandFire } = await import('App/Models/WildlandFire');
+
     const response = await fetch(
-      url,
+      'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query?where=1%3D1&outFields=IrwinID,DailyAcres,IncidentName,ModifiedOnDateTime_dt,FireDiscoveryDateTime,PercentContained,IncidentTypeCategory,GlobalID&outSR=4326&f=json',
     );
 
     if (response.ok) {
       const body = await response.json();
 
-      return body.features;
-    }
-
-    return [];
-  }
-
-  public static async getIncidents(): Promise<Incident[]> {
-    const { default: Trail } = await import('App/Models/Trail');
-    const trail = await Trail.findBy('name', 'PCT');
-
-    if (trail) {
-      const objectIds = await IncidentsUpdate.getObjectIds();
-
-      let features: any[] = [];
-
-      if (objectIds.length > 0) {
-        const maxSetSize = 250;
-        for (let i = 0; i < objectIds.length; i += maxSetSize) {
-          // eslint-disable-next-line no-await-in-loop
-          const featureSubset = await IncidentsUpdate.getFeatures(
-            objectIds.slice(i, i + maxSetSize),
-          );
-
-          features = features.concat(featureSubset);
-        }
+      if (debug) {
+        console.log(body);
       }
 
-      const incidents: Incident[] = [];
+      // eslint-disable-next-line no-restricted-syntax
+      for (const feature of body.features) {
+        // eslint-disable-next-line no-await-in-loop
+        feature.perimeter = await IncidentsUpdate.getPerimeter(feature.attributes.IrwinID);
+      }
 
       // eslint-disable-next-line no-restricted-syntax
-      for (const feature of features) {
-        const coordinates = feature.geometry;
-        const distance = trail.getDistanceToTrail([coordinates.x, coordinates.y]);
-
+      const incidents = await Promise.all(body.features.map(async (feature) => {
         const { attributes: properties } = feature;
 
-        if (distance !== null && distance < 1609.34 * 10) {
-          incidents.push({
+        let shortestDistance: number | null = null;
+
+        feature.perimeter?.rings.forEach((r: [number, number][]) => {
+          const extents = getExtents(r);
+
+          if (extents && trail.expandedBoundsIntersection(extents)
+          ) {
+            r.forEach((c: [number, number]) => {
+              const distance = trail?.getDistanceToTrail(c);
+
+              if (distance && (shortestDistance === null || distance < shortestDistance)) {
+                shortestDistance = distance;
+              }
+            });
+          }
+        });
+
+        const coordinates = feature.geometry;
+        const distance = trail?.getDistanceToTrail([coordinates.x, coordinates.y]);
+        if (distance && (shortestDistance === null || distance < shortestDistance)) {
+          shortestDistance = distance;
+        }
+
+        let incident: Incident | null = null;
+
+        if (shortestDistance !== null && shortestDistance < 1609.34 * 10) {
+          incident = {
             globalId: properties.GlobalID,
             name: properties.IncidentName,
             discoveredAt: DateTime.fromMillis(properties.FireDiscoveryDateTime),
@@ -103,80 +113,56 @@ export default class IncidentsUpdate extends BaseCommand {
               : null,
             lat: coordinates.y,
             lng: coordinates.x,
-            distance,
-          });
+            distance: shortestDistance,
+            perimeter: feature.perimeter,
+          };
         }
+
+        return incident;
+      }));
+
+      const date = DateTime.local().setZone('America/Los_Angeles').toISODate();
+      let wf = await WildlandFire.findBy('date', date);
+
+      if (wf) {
+        await wf
+          .merge({
+            incidents: incidents.filter((i) => i !== null),
+          })
+          .save();
       }
+      else {
+        wf = new WildlandFire();
 
-      return incidents;
+        await wf
+          .fill({
+            date,
+            incidents: incidents.filter((i) => i !== null),
+          })
+          .save();
+      }
     }
+  }
 
-    return [];
+  static async updateIncidents() {
+    try {
+      const { default: Trail } = await import('App/Models/Trail');
+
+      const trail = await Trail.findBy('name', 'PCT');
+
+      if (trail) {
+        console.log('Updating wildland fire incidents');
+        await IncidentsUpdate.getIncidents(trail);
+        console.log('Completed updating wildland fire incidents');
+      }
+    }
+    catch (error) {
+      console.log(error.message);
+    }
   }
 
   // eslint-disable-next-line class-methods-use-this
   public async run() {
-    const { default: WildlandFire } = await import('App/Models/WildlandFire');
-
-    const incidents = await IncidentsUpdate.getIncidents();
-
-    if (incidents.length > 0) {
-      const { days } = DateTime.fromISO('2022-12-31').diff(DateTime.fromISO('2022-01-01'), 'days');
-
-      const year = 2022;
-
-      // const t = incidents.find((i) => i.name === 'SOUTH');
-      for (let day = 0; day < days; day += 1) {
-        const date = DateTime.fromISO(`${year}-01-01`, { zone: 'America/Los_Angeles' })
-          .plus({ days: day, hours: 23 });
-
-        const incis = incidents.filter((i) => {
-          if (i.discoveredAt <= date) {
-            if (i.containmentDateTime && i.containmentDateTime < date) {
-              return false;
-            }
-
-            let fallOffDays = 14;
-            if (i.incidentSize ?? 0 < 10) {
-              fallOffDays = 3;
-            }
-            else if (i.incidentSize ?? 0 < 100) {
-              fallOffDays = 8;
-            }
-
-            if (i.modifiedAt.plus({ days: fallOffDays }) < date) {
-              return false;
-            }
-
-            return true;
-          }
-
-          return false;
-        });
-
-        // eslint-disable-next-line no-await-in-loop
-        let wf = await WildlandFire.findBy('date', date.toISODate());
-
-        if (wf) {
-          // eslint-disable-next-line no-await-in-loop
-          await wf
-            .merge({
-              incidents: incis,
-            })
-            .save();
-        }
-        else {
-          wf = new WildlandFire();
-
-          // eslint-disable-next-line no-await-in-loop
-          await wf
-            .fill({
-              date: date.toISODate(),
-              incidents: incis,
-            })
-            .save();
-        }
-      }
-    }
+    await IncidentsUpdate.updateIncidents();
   }
 }

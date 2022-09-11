@@ -49,6 +49,12 @@ export const nearestPointOnLineSegment = (
   return [[p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])], t];
 };
 
+export const lengthSquared = (p1: Point2D, p2: Point2D) => {
+  const l1 = p1[0] - p2[0];
+  const l2 = p1[1] - p2[1];
+  return l1 * l1 + l2 * l2;
+};
+
 export const length = (p1: Point2D, p2: Point2D) => {
   const l1 = p1[0] - p2[0];
   const l2 = p1[1] - p2[1];
@@ -63,7 +69,7 @@ export const nearestPointOnPolyLine = (
     throw new Error('polyline has zero lenght');
   }
 
-  let shorttestDistance: number | null = null;
+  let shortestDistanceSquared: number | null = null;
   let closestPoint: Point2D | null = null;
   let closestIndex: number | null = null;
 
@@ -73,7 +79,6 @@ export const nearestPointOnPolyLine = (
     let [p] = result;
     const [, t] = result;
 
-    let d = 0;
     if (t <= 0) {
       p = line[i];
     }
@@ -85,20 +90,20 @@ export const nearestPointOnPolyLine = (
       throw new Error('p is null');
     }
 
-    d = length(p, point);
+    const distanceSquared = lengthSquared(p, point);
 
-    if (shorttestDistance === null || d < shorttestDistance) {
-      shorttestDistance = d;
+    if (shortestDistanceSquared === null || distanceSquared < shortestDistanceSquared) {
+      shortestDistanceSquared = distanceSquared;
       closestPoint = p;
       closestIndex = i;
     }
   }
 
-  if (closestPoint === null || shorttestDistance === null || closestIndex === null) {
+  if (closestPoint === null || shortestDistanceSquared === null || closestIndex === null) {
     throw new Error('nearest point on polyline was not found');
   }
 
-  return [closestPoint, shorttestDistance, closestIndex];
+  return [closestPoint, Math.sqrt(shortestDistanceSquared), closestIndex];
 };
 
 function degToRad(degrees: number): number {
@@ -129,7 +134,14 @@ export const haversineGreatCircleDistance = (
   return angle * earthRadius;
 };
 
-export const getExtents = (polyline: [number, number][]) => {
+export type Extents = {
+  east: number,
+  west: number,
+  north: number,
+  south: number,
+};
+
+export const getExtents = (polyline: [number, number][]): Extents | null => {
   let east: number | null = null;
   let west: number | null = null;
   let north: number | null = null;
@@ -154,10 +166,50 @@ export const getExtents = (polyline: [number, number][]) => {
     }
   }
 
+  if (east === null || west === null || north === null || south === null) {
+    return null;
+  }
+
   return {
     east,
     west,
     north,
     south,
   };
+};
+
+export const expandExtents = (extents: Extents, expansion: number) => ({
+  north: extents.north + expansion,
+  south: extents.south - expansion,
+  east: extents.east + expansion,
+  west: extents.west - expansion,
+});
+
+export const lineSegmentRectangleIntersect = (
+  s1: Point2D,
+  s2: Point2D,
+  r1: Point2D,
+  r2: Point2D,
+) => {
+  // If any of the points of the line segment lies within the
+  // rectangle then the line segment intersects the rectangle
+  if (
+    (
+      r1[0] < s1[0] && s1[0] < r2[0]
+      && r1[1] < s1[1] && s1[1] < r2[1]
+    )
+    || (
+      r1[0] < s2[0] && s2[0] < r2[0]
+      && r1[1] < s2[1] && s2[1] < r2[1]
+    )
+  ) {
+    return true;
+  }
+
+  // Both point of the line segment lie outside the rectangle.
+  // Test if the line segment intersects with any of the
+  // rectangles boundary line segments.
+  // TODO: Add test
+
+  return false;
 };

@@ -1,7 +1,5 @@
 /* eslint-disable class-methods-use-this */
 import { ApplicationContract } from '@ioc:Adonis/Core/Application';
-import FireIncidentUpdater from './FireIncidentUpdater';
-import HeatmapUpdater from './HeatmapUpdater/HeatmapUpdater';
 
 export default class AppProvider {
   // eslint-disable-next-line no-useless-constructor
@@ -9,16 +7,6 @@ export default class AppProvider {
 
   public register() {
     // Register your own bindings
-
-    // Register the location updater binding.
-    this.app.container.singleton('HeatmapUpdater', () => (
-      new HeatmapUpdater()
-    ));
-
-    // Register the location updater binding.
-    this.app.container.singleton('FireIncidentUpdater', () => (
-      new FireIncidentUpdater()
-    ));
   }
 
   public async boot() {
@@ -33,14 +21,27 @@ export default class AppProvider {
 
   public async ready() {
     // App is ready
+    const { default: Bull } = await import('@ioc:Rocketseat/Bull');
 
-    // Importing the HeatmapUpdater will instantiate an instance
-    // which will start it running.
-    import('@ioc:HeatmapUpdater');
+    Bull.add(
+      'UpdateIncidents',
+      null,
+      {
+        repeat: {
+          cron: '0 * * * *',
+        }
+      },
+    );
 
-    // Importing the FireIncidentUpdater will instantiate an instance
-    // which will start it running.
-    import('@ioc:FireIncidentUpdater');
+    Bull.add(
+      'UpdateHeatmap',
+      null,
+      {
+        repeat: {
+          cron: '0 1 * * *',
+        }
+      },
+    );
   }
 
   public async shutdown() {

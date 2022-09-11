@@ -1,28 +1,26 @@
-/* eslint-disable class-methods-use-this */
-import { CronJob } from 'cron';
+import { JobContract } from '@ioc:Rocketseat/Bull';
 import { DateTime } from 'luxon';
+
+/*
+|--------------------------------------------------------------------------
+| Job setup
+|--------------------------------------------------------------------------
+|
+| This is the basic setup for creating a job, but you can override
+| some settings.
+|
+| You can get more details by looking at the bullmq documentation.
+| https://docs.bullmq.io/
+*/
 
 // Points have to be less than 0.1 miles from the
 // trail to be included
 const distanceThreshold = 160.934; // meters
 
-class HeatmapUpdater {
-  cronJob: CronJob;
+export default class UpdateHeatmap implements JobContract {
+  public key = 'UpdateHeatmap';
 
-  intervalId: NodeJS.Timer;
-
-  constructor() {
-    this.cronJob = new CronJob(
-      '0 1 * * *', // 1 AM
-      () => this.updateLocations(),
-      undefined,
-      undefined,
-      'America/Los_Angeles',
-    );
-    this.cronJob.start();
-  }
-
-  async updateLocations() {
+  private static async updateLocations() {
     const { default: User } = await import('App/Models/User');
     const { default: Heatmap } = await import('App/Models/Heatmap');
     const { default: Trail } = await import('App/Models/Trail');
@@ -81,6 +79,10 @@ class HeatmapUpdater {
 
     heatmap.save();
   }
-}
 
-export default HeatmapUpdater;
+  // eslint-disable-next-line class-methods-use-this
+  public async handle() {
+    // Do somethign with you job data
+    await UpdateHeatmap.updateLocations();
+  }
+}
