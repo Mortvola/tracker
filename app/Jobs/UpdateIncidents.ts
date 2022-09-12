@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import WildlandFire, { Incident } from 'App/Models/WildlandFire';
 import fetch from 'node-fetch';
 import Logger from '@ioc:Adonis/Core/Logger'
+import Trail from 'App/Models/Trail';
 
 /*
 |--------------------------------------------------------------------------
@@ -94,8 +95,8 @@ export default class UpdateIncidents implements JobContract {
     return incident;
   }
 
-  public static async getIncidents(
-    trail: any,
+  private static async getIncidents(
+    trail: Trail,
   ): Promise<void> {
     type IncidentResponse = {
       features: {
@@ -124,6 +125,9 @@ export default class UpdateIncidents implements JobContract {
     if (response.ok) {
       const body = (await response.json()) as IncidentResponse;
 
+      const date = DateTime.local().setZone('America/Los_Angeles').toISODate();
+      let wf = await WildlandFire.findBy('date', date);
+
       Logger.info(`Number of features: ${body.features.length}`);
 
       const featurePromises: Promise<Incident | null>[] = [];
@@ -132,6 +136,17 @@ export default class UpdateIncidents implements JobContract {
       for (const feature of body.features) {
         // eslint-disable-next-line no-await-in-loop
         feature.perimeter = await UpdateIncidents.getPerimeter(feature.attributes.IrwinID);
+
+        if (!feature.perimeter) {
+          const previousIncident = wf?.incidents.find(
+            (i) => i.globalId === feature.attributes.GlobalID,
+          );
+
+          if (previousIncident?.perimeter) {
+            feature.perimeter = previousIncident.perimeter;
+          }
+        }
+
         Logger.info(`Perimeter fetched for feature ${feature.attributes.IncidentName}`);
 
         featurePromises.push(UpdateIncidents.processFeature(feature, trail));
@@ -140,9 +155,6 @@ export default class UpdateIncidents implements JobContract {
       // eslint-disable-next-line no-restricted-syntax
       const incidents = (await Promise.all(featurePromises))
         .filter((i) => i !== null) as Incident[];
-
-      const date = DateTime.local().setZone('America/Los_Angeles').toISODate();
-      let wf = await WildlandFire.findBy('date', date);
 
       if (wf) {
         await wf
@@ -164,10 +176,8 @@ export default class UpdateIncidents implements JobContract {
     }
   }
 
-  static async updateIncidents() {
+  private static async updateIncidents() {
     try {
-      const { default: Trail } = await import('App/Models/Trail');
-
       const trail = await Trail.findBy('name', 'PCT');
 
       if (trail) {
