@@ -35,7 +35,7 @@ export default class UpdateIncidents implements JobContract {
       if (response.ok) {
         const body = await response.json();
 
-        if (body.features && body.features.length > 0) {
+        if (body.features?.length) {
           return body.features[0].geometry;
         }
       }
@@ -74,6 +74,7 @@ export default class UpdateIncidents implements JobContract {
     if (shortestDistance !== null && shortestDistance < 1609.34 * 10) {
       incident = {
         globalId: properties.GlobalID,
+        irwinId: properties.IrwinID,
         name: properties.IncidentName,
         discoveredAt: DateTime.fromMillis(properties.FireDiscoveryDateTime),
         modifiedAt: DateTime.fromMillis(properties.ModifiedOnDateTime_dt),
@@ -147,7 +148,12 @@ export default class UpdateIncidents implements JobContract {
           }
         }
 
-        Logger.info(`Perimeter fetched for feature ${feature.attributes.IncidentName}`);
+        if (feature.perimeter) {
+          Logger.info(`Perimeter fetched for feature ${feature.attributes.IncidentName}`);
+        }
+        else {
+          Logger.info(`Perimeter NOT fetched for feature ${feature.attributes.IncidentName}`);
+        }
 
         featurePromises.push(UpdateIncidents.processFeature(feature, trail));
       }

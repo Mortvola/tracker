@@ -3,6 +3,7 @@ import { BaseModel, column } from '@ioc:Adonis/Lucid/Orm';
 
 export type Incident = {
   globalId: string,
+  irwinId?: string,
   lat: number,
   lng: number,
   name: string,

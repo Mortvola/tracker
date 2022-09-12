@@ -3,6 +3,20 @@ import { Incident } from 'App/Models/WildlandFire';
 import { DateTime } from 'luxon';
 import fetch from 'node-fetch';
 
+type Feature = {
+  geometry: { x: number, y: number},
+  attributes: {
+    GlobalID: string,
+    IncidentName: string,
+    FireDiscoveryDateTime: number,
+    ModifiedOnDateTime_dt: number,
+    IncidentTypeCategory: string,
+    DailyAcres: number | null,
+    PercentContained: number | null,
+    ContainmentDateTime: number | null,
+  },
+}
+
 export default class IncidentsUpdateHistory extends BaseCommand {
   /**
    * Command name is used to run the command
@@ -44,7 +58,7 @@ export default class IncidentsUpdateHistory extends BaseCommand {
     return [];
   }
 
-  private static async getFeatures(ids: number[]): Promise<any[]> {
+  private static async getFeatures(ids: number[]): Promise<Feature[]> {
     const url = `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/CY_WildlandFire_Locations_ToDate/FeatureServer/0/query?objectIds=${ids.join()}&outFields=*&outSR=4326&f=json`;
     const response = await fetch(
       url,
@@ -53,7 +67,7 @@ export default class IncidentsUpdateHistory extends BaseCommand {
     if (response.ok) {
       const body = await response.json();
 
-      return body.features;
+      return body.features as Feature[];
     }
 
     return [];
@@ -66,7 +80,7 @@ export default class IncidentsUpdateHistory extends BaseCommand {
     if (trail) {
       const objectIds = await IncidentsUpdateHistory.getObjectIds();
 
-      let features: any[] = [];
+      let features: Feature[] = [];
 
       if (objectIds.length > 0) {
         const maxSetSize = 250;
