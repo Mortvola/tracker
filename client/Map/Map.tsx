@@ -10,6 +10,7 @@ import {
   HeatmapResponse, TrailResponse, WildlandFireResponse,
 } from '../../common/ResponseTypes';
 import WildlandFireMarker, { WildlandFire } from './WildlandFireMarker';
+import IconButton from '../IconButton/IconButton';
 
 export type LocationStatus = 'red' | 'green' | 'yellow';
 
@@ -40,6 +41,7 @@ const MapWrapper: React.FC<PropsType> = ({
     libraries,
   });
 
+  const [loading, setLoading] = React.useState<boolean>(true);
   const [, setMap] = React.useState<google.maps.Map | null>(null);
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
   const [heatmap, setHeatmap] = React.useState<google.maps.LatLng[]>([]);
@@ -126,6 +128,53 @@ const MapWrapper: React.FC<PropsType> = ({
     }
   }, [day, isLoaded]);
 
+  const fetchWildfireIncidents = React.useCallback(async () => {
+    if (!incidents.current) {
+      throw new Error('incidents.current is null');
+    }
+
+    setLoading(true);
+    try {
+      const response = await Http.get<WildlandFireResponse>(`/api/wildland-fires/2022/${day}`);
+
+      if (response.ok) {
+        const body = await response.body();
+
+        const wf = body.map((p) => ({
+          id: p.globalId,
+          latlng: new google.maps.LatLng(p.lat, p.lng),
+          name: p.name,
+          discoveredAt: DateTime.fromISO(p.discoveredAt),
+          modifiedAt: DateTime.fromISO(p.modifiedAt),
+          incidentTypeCategory: p.incidentTypeCategory,
+          incidentSize: p.incidentSize,
+          percentContained: p.percentContained,
+          distance: p.distance,
+          perimeter: {
+            rings: p.perimeter
+              ? p.perimeter.rings.map((r) => (
+                r.map((r2) => (
+                  new google.maps.LatLng(r2[1], r2[0])
+                ))
+              ))
+              : [],
+          },
+        }));
+
+        incidents.current.set(day, wf);
+        setWildlandFires(incidents.current.get(day) ?? []);
+      }
+      else {
+        incidents.current.set(day, []);
+        setWildlandFires([]);
+      }
+    }
+    catch (error) {
+      console.log(error);
+    }
+    setLoading(false);
+  }, [day]);
+
   React.useEffect(() => {
     if (isLoaded) {
       (async () => {
@@ -133,50 +182,17 @@ const MapWrapper: React.FC<PropsType> = ({
           throw new Error('incidents.current is null');
         }
 
-        let wf = incidents.current.get(day);
+        const wf = incidents.current.get(day);
 
         if (!wf) {
-          setWildlandFires(null);
-          const response = await Http.get<WildlandFireResponse>(`/api/wildland-fires/2022/${day}`);
-
-          if (response.ok) {
-            const body = await response.body();
-
-            wf = body.map((p) => ({
-              id: p.globalId,
-              latlng: new google.maps.LatLng(p.lat, p.lng),
-              name: p.name,
-              discoveredAt: DateTime.fromISO(p.discoveredAt),
-              modifiedAt: DateTime.fromISO(p.modifiedAt),
-              incidentTypeCategory: p.incidentTypeCategory,
-              incidentSize: p.incidentSize,
-              percentContained: p.percentContained,
-              distance: p.distance,
-              perimeter: {
-                rings: p.perimeter
-                  ? p.perimeter.rings.map((r) => (
-                    r.map((r2) => (
-                      new google.maps.LatLng(r2[1], r2[0])
-                    ))
-                  ))
-                  : [],
-              },
-            }));
-
-            incidents.current.set(day, wf);
-            setWildlandFires(incidents.current.get(day) ?? []);
-          }
-          else {
-            incidents.current.set(day, []);
-            setWildlandFires([]);
-          }
+          fetchWildfireIncidents();
         }
         else {
           setWildlandFires(wf);
         }
       })();
     }
-  }, [day, isLoaded]);
+  }, [day, fetchWildfireIncidents, isLoaded]);
 
   const [infoWindowOpen, setInfoWindowOpen] = React.useState<string | null>(null);
   const handleInfoWindowOpen = (id: string | null) => {
@@ -188,6 +204,16 @@ const MapWrapper: React.FC<PropsType> = ({
     setInfoWindowOpen(null);
   };
 
+  const handleDecrement = async () => {
+    setDay((prev) => prev - 1);
+    setInfoWindowOpen(null);
+  };
+
+  const handleIncrement = async () => {
+    setDay((prev) => prev + 1);
+    setInfoWindowOpen(null);
+  };
+
   const onLoad = React.useCallback((m: google.maps.Map) => {
     setMap(m);
   }, []);
@@ -195,6 +221,10 @@ const MapWrapper: React.FC<PropsType> = ({
   const onUnmount = React.useCallback(() => {
     setMap(null);
   }, []);
+
+  const handleRefresh = () => {
+    fetchWildfireIncidents();
+  };
 
   if (isLoaded) {
     const { days } = DateTime.fromISO('2022-12-31').diff(DateTime.fromISO('2022-01-01'), 'days');
@@ -252,7 +282,11 @@ const MapWrapper: React.FC<PropsType> = ({
                   }
                 </>
               )
-              : (
+              : null
+          }
+          {
+            loading
+              ? (
                 <div
                   style={{
                     position: 'absolute',
@@ -266,6 +300,7 @@ const MapWrapper: React.FC<PropsType> = ({
                   Loading...
                 </div>
               )
+              : null
           }
           {
             trail
@@ -286,7 +321,12 @@ const MapWrapper: React.FC<PropsType> = ({
           />
         </GoogleMap>
         <div className={styles.date}>
-          {DateTime.fromISO('2022-01-01').plus({ days: day }).toISODate()}
+          <div>
+            {DateTime.fromISO('2022-01-01').plus({ days: day }).toISODate()}
+          </div>
+          <IconButton icon="angle-left" onClick={handleDecrement} />
+          <IconButton icon="angle-right" onClick={handleIncrement} />
+          <IconButton icon="sync-alt" onClick={handleRefresh} />
         </div>
         <Controls
           min={0}

@@ -24,14 +24,6 @@ const Controls: React.FC<PropsType> = ({
     }
   };
 
-  const handleBackClick = () => {
-    onChange(value - 1);
-  };
-
-  const handleForwardClick = () => {
-    onChange(value + 1);
-  };
-
   const handlePointerDown = (
     event: React.PointerEvent<HTMLDivElement> & {
       target: {
@@ -75,9 +67,7 @@ const Controls: React.FC<PropsType> = ({
         ref={ref}
         className={styles.progressBar}
       >
-        <div className={styles.button} onClick={handleBackClick}>-</div>
         <div className={styles.bar} />
-        <div className={styles.button} onClick={handleForwardClick}>+</div>
         <div
           className={styles.progress}
           style={{ left: `calc(${valueToPercentage(value).toString()}% - 0.75rem)` }}

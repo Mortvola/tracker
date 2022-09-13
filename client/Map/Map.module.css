@@ -7,4 +7,9 @@
 
 .date {
   justify-self: center;
+  display: flex;
+}
+
+.date > * {
+  align-self: center;
 }

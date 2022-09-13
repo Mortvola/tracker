@@ -7,7 +7,7 @@
 
 .progressBar {
   display: grid;
-  grid-template-columns: 1rem minmax(0,1fr) 1rem;
+  grid-template-columns: minmax(0,1fr);
   grid-template-rows: minmax(0,1fr);
   column-gap: 0.5rem;
   margin: 1rem;
