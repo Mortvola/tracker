@@ -44,7 +44,7 @@ const MapWrapper: React.FC<PropsType> = ({
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
   const [heatmap, setHeatmap] = React.useState<google.maps.LatLng[]>([]);
   const [day, setDay] = React.useState<number>(
-    Math.trunc(DateTime.now().minus({ days: 1 }).diff(DateTime.fromISO('2022-01-01'), 'days').days),
+    Math.trunc(DateTime.now().diff(DateTime.fromISO('2022-01-01'), 'days').days),
   );
   const heatmaps = React.useRef<Map<number, google.maps.LatLng[]>>();
   const incidents = React.useRef<Map<number, WildlandFire[]>>();
