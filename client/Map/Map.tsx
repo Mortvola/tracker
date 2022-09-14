@@ -4,6 +4,7 @@ import {
 } from '@react-google-maps/api';
 import Http from '@mortvola/http';
 import { DateTime } from 'luxon';
+import { Toast, ToastContainer } from 'react-bootstrap';
 import Controls from './Controls';
 import styles from './Map.module.css';
 import {
@@ -41,6 +42,13 @@ const MapWrapper: React.FC<PropsType> = ({
     libraries,
   });
 
+  type Changes = 'New' | 'Size' | 'Distance';
+
+  type WildfireChanges = {
+    wildlandFire: WildlandFire,
+    changes: Changes[],
+  }
+
   const [loading, setLoading] = React.useState<boolean>(true);
   const [, setMap] = React.useState<google.maps.Map | null>(null);
   const [trail, setTrail] = React.useState<{ lat: number, lng: number }[][] | null>(null);
@@ -51,6 +59,7 @@ const MapWrapper: React.FC<PropsType> = ({
   const heatmaps = React.useRef<Map<number, google.maps.LatLng[]>>();
   const incidents = React.useRef<Map<number, WildlandFire[]>>();
   const [wildlandFires, setWildlandFires] = React.useState<WildlandFire[] | null>(null);
+  const [changeAlerts, setChangeAlerts] = React.useState<WildfireChanges[]>([]);
 
   if (heatmaps.current === undefined) {
     heatmaps.current = new Map<number, google.maps.LatLng[]>();
@@ -128,6 +137,39 @@ const MapWrapper: React.FC<PropsType> = ({
     }
   }, [day, isLoaded]);
 
+  const compareIncidents = (prevWf: WildlandFire[] | undefined, wf: WildlandFire[]) => {
+    if (prevWf) {
+      wf.forEach((incident) => {
+        const prevIncident = prevWf.find((i) => i.id === incident.id);
+
+        const incidentChanges: WildfireChanges = {
+          wildlandFire: incident,
+          changes: [],
+        };
+
+        if (!prevIncident) {
+          incidentChanges.changes = ['New'];
+        }
+        else {
+          if (prevIncident?.distance !== incident.distance) {
+            incidentChanges.changes.push('Distance');
+          }
+
+          if (prevIncident?.incidentSize !== incident.incidentSize) {
+            incidentChanges.changes.push('Size');
+          }
+        }
+
+        if (incidentChanges.changes.length) {
+          setChangeAlerts((prev) => ([
+            incidentChanges,
+            ...prev,
+          ]));
+        }
+      });
+    }
+  };
+
   const fetchWildfireIncidents = React.useCallback(async () => {
     if (!incidents.current) {
       throw new Error('incidents.current is null');
@@ -161,6 +203,8 @@ const MapWrapper: React.FC<PropsType> = ({
           },
         }));
 
+        const prevWf = incidents.current.get(day);
+        compareIncidents(prevWf, wf);
         incidents.current.set(day, wf);
         setWildlandFires(incidents.current.get(day) ?? []);
       }
@@ -226,6 +270,37 @@ const MapWrapper: React.FC<PropsType> = ({
     fetchWildfireIncidents();
   };
 
+  const renderChange = (cx: Changes) => {
+    switch (cx) {
+      case 'New':
+        return <div key="New">New fire incident</div>;
+
+      case 'Distance':
+        return <div key="Distance">Distance to trail changed</div>;
+
+      case 'Size':
+        return <div key="Size">Size of incident changed</div>;
+
+      default:
+        return <div key="Unknown">Unknown change</div>;
+    }
+  };
+
+  const handleCloseToast = (change: WildfireChanges) => {
+    setChangeAlerts((prev) => {
+      const index = prev.findIndex((c) => c.wildlandFire.id === change.wildlandFire.id);
+
+      if (index !== -1) {
+        return [
+          ...prev.slice(0, index),
+          ...prev.slice(index + 1),
+        ];
+      }
+
+      return prev;
+    });
+  };
+
   if (isLoaded) {
     const { days } = DateTime.fromISO('2022-12-31').diff(DateTime.fromISO('2022-01-01'), 'days');
 
@@ -287,16 +362,7 @@ const MapWrapper: React.FC<PropsType> = ({
           {
             loading
               ? (
-                <div
-                  style={{
-                    position: 'absolute',
-                    zIndex: 1,
-                    backgroundColor: '#fff',
-                    padding: '0 0.5rem',
-                    bottom: '2px',
-                    left: '2px',
-                  }}
-                >
+                <div className={styles.loading}>
                   Loading...
                 </div>
               )
@@ -319,6 +385,24 @@ const MapWrapper: React.FC<PropsType> = ({
             data={heatmap}
             options={{ dissipating: true, opacity: 1 }}
           />
+          <ToastContainer position="top-end" className={styles.toasts}>
+            {
+              changeAlerts.map((c) => (
+                <Toast key={c.wildlandFire.id} onClose={() => handleCloseToast(c)}>
+                  <Toast.Header className={styles.toastHeader}>
+                    {c.wildlandFire.name}
+                  </Toast.Header>
+                  <Toast.Body>
+                    {
+                      c.changes.map((cx) => (
+                        renderChange(cx)
+                      ))
+                    }
+                  </Toast.Body>
+                </Toast>
+              ))
+            }
+          </ToastContainer>
         </GoogleMap>
         <div className={styles.date}>
           <div>

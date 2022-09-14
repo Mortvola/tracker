@@ -13,3 +13,20 @@
 .date > * {
   align-self: center;
 }
+
+.loading {
+  position: absolute;
+  z-index: 1;
+  background-color: #fff;
+  padding: 0 0.5rem;
+  bottom: 2px;
+  left: 2px;
+}
+
+.toasts {
+  z-index: 1;
+}
+
+.toast-header {
+  justify-content: space-between;
+}
