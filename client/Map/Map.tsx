@@ -8,9 +8,9 @@ import { Toast, ToastContainer } from 'react-bootstrap';
 import Controls from './Controls';
 import styles from './Map.module.css';
 import {
-  HeatmapResponse, TrailResponse, WildlandFireResponse,
+  HeatmapResponse, PerimeterResponse, TrailResponse, WildlandFireResponse,
 } from '../../common/ResponseTypes';
-import WildlandFireMarker, { WildlandFire } from './WildlandFireMarker';
+import WildlandFireMarker, { Perimeter, WildlandFire } from './WildlandFireMarker';
 import IconButton from '../IconButton/IconButton';
 
 export type LocationStatus = 'red' | 'green' | 'yellow';
@@ -58,6 +58,7 @@ const MapWrapper: React.FC<PropsType> = ({
   );
   const heatmaps = React.useRef<Map<number, google.maps.LatLng[]>>();
   const incidents = React.useRef<Map<number, WildlandFire[]>>();
+  const perimeters = React.useRef<Map<number, Perimeter>>();
   const [wildlandFires, setWildlandFires] = React.useState<WildlandFire[] | null>(null);
   const [changeAlerts, setChangeAlerts] = React.useState<WildfireChanges[]>([]);
 
@@ -67,6 +68,10 @@ const MapWrapper: React.FC<PropsType> = ({
 
   if (incidents.current === undefined) {
     incidents.current = new Map<number, WildlandFire[]>();
+  }
+
+  if (perimeters.current === undefined) {
+    perimeters.current = new Map<number, Perimeter>();
   }
 
   React.useEffect(() => {
@@ -137,7 +142,10 @@ const MapWrapper: React.FC<PropsType> = ({
     }
   }, [day, isLoaded]);
 
-  const compareIncidents = (prevWf: WildlandFire[] | undefined, wf: WildlandFire[]) => {
+  const compareIncidents = React.useCallback((
+    prevWf: WildlandFire[] | undefined,
+    wf: WildlandFire[],
+  ) => {
     if (prevWf) {
       wf.forEach((incident) => {
         const prevIncident = prevWf.find((i) => i.id === incident.id);
@@ -168,6 +176,32 @@ const MapWrapper: React.FC<PropsType> = ({
         }
       });
     }
+  }, []);
+
+  const fetchPerimeters = async (wf: WildlandFire[]) => {
+    const perimetersMap = perimeters.current;
+
+    if (perimetersMap) {
+      wf.forEach(async (w) => {
+        if (w.perimeterId !== null && !perimetersMap.has(w.perimeterId)) {
+          const response = await Http.get<PerimeterResponse>(`/api/perimeter/${w.perimeterId}`);
+
+          if (response.ok) {
+            const body = await response.body();
+
+            perimetersMap.set(w.perimeterId, {
+              rings: body.rings.map((r) => (
+                r.map((r2) => (
+                  new google.maps.LatLng(r2[1], r2[0])
+                ))
+              )),
+            });
+
+            console.log(`added perimeter ${w.perimeterId}`);
+          }
+        }
+      });
+    }
   };
 
   const fetchWildfireIncidents = React.useCallback(async () => {
@@ -182,7 +216,7 @@ const MapWrapper: React.FC<PropsType> = ({
       if (response.ok) {
         const body = await response.body();
 
-        const wf = body.map((p) => ({
+        const wf: WildlandFire[] = body.map((p) => ({
           id: p.globalId,
           latlng: new google.maps.LatLng(p.lat, p.lng),
           name: p.name,
@@ -192,32 +226,36 @@ const MapWrapper: React.FC<PropsType> = ({
           incidentSize: p.incidentSize,
           percentContained: p.percentContained,
           distance: p.distance,
-          perimeter: {
-            rings: p.perimeter
-              ? p.perimeter.rings.map((r) => (
-                r.map((r2) => (
-                  new google.maps.LatLng(r2[1], r2[0])
-                ))
-              ))
-              : [],
-          },
+          perimeterId: p.perimeterId,
+          // perimeter: {
+          //   rings: p.perimeter
+          //     ? p.perimeter.rings.map((r) => (
+          //       r.map((r2) => (
+          //         new google.maps.LatLng(r2[1], r2[0])
+          //       ))
+          //     ))
+          //     : [],
+          // },
         }));
 
         const prevWf = incidents.current.get(day);
         compareIncidents(prevWf, wf);
         incidents.current.set(day, wf);
         setWildlandFires(incidents.current.get(day) ?? []);
+
+        return wf;
       }
-      else {
-        incidents.current.set(day, []);
-        setWildlandFires([]);
-      }
+
+      incidents.current.set(day, []);
+      setWildlandFires([]);
     }
     catch (error) {
       console.log(error);
     }
     setLoading(false);
-  }, [day]);
+
+    return [];
+  }, [compareIncidents, day]);
 
   React.useEffect(() => {
     if (isLoaded) {
@@ -229,7 +267,8 @@ const MapWrapper: React.FC<PropsType> = ({
         const wf = incidents.current.get(day);
 
         if (!wf) {
-          fetchWildfireIncidents();
+          const wf2 = await fetchWildfireIncidents();
+          fetchPerimeters(wf2);
         }
         else {
           setWildlandFires(wf);
@@ -339,21 +378,39 @@ const MapWrapper: React.FC<PropsType> = ({
                     ))
                   }
                   {
-                    wildlandFires.map((wf) => (
-                      wf.perimeter
-                        ? (
-                          <Polygon
-                            key={wf.id}
-                            paths={wf.perimeter.rings}
-                            options={{
-                              fillColor: '#cf0000',
-                              fillOpacity: 0.25,
-                              strokeColor: '#cf0000',
-                            }}
-                          />
-                        )
-                        : null
-                    ))
+                    wildlandFires.map((wf) => {
+                      let perimeter: Perimeter | undefined;
+
+                      if (wf.perimeterId) {
+                        const perimetersMap = perimeters.current;
+
+                        if (perimetersMap) {
+                          perimeter = perimetersMap.get(wf.perimeterId);
+                          if (perimeter) {
+                            console.log(`perimeter found in map: ${wf.perimeterId}, ${perimeter.rings.length}`);
+                          }
+                          else {
+                            console.log(`perimeter not found in map: ${wf.perimeterId}`);
+                          }
+                        }
+                      }
+
+                      return (
+                        perimeter
+                          ? (
+                            <Polygon
+                              key={wf.id}
+                              paths={perimeter.rings}
+                              options={{
+                                fillColor: '#cf0000',
+                                fillOpacity: 0.25,
+                                strokeColor: '#cf0000',
+                              }}
+                            />
+                          )
+                          : null
+                      );
+                    })
                   }
                 </>
               )

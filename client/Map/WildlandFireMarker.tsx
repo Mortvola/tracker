@@ -12,8 +12,12 @@ export type WildlandFire = {
   incidentSize: number | null,
   percentContained: number | null,
   distance?: number,
-  perimeter?: { rings: google.maps.LatLng[][] },
+  perimeterId: number | null,
 };
+
+export type Perimeter = {
+  rings: google.maps.LatLng[][],
+}
 
 type PropsType = {
   wf: WildlandFire,
@@ -44,7 +48,7 @@ const WildlandFireMarker: React.FC<PropsType> = ({
       onClick={handleWfClick}
       options={{
         title: wf.name,
-        icon: 'https://inciweb.nwcg.gov/images/esri/marker_fire.png',
+        icon: '/marker_fire.png',
       }}
     >
       {

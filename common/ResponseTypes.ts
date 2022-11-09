@@ -53,7 +53,9 @@ export type WildlandFireResponse = {
   incidentSize: number | null,
   percentContained: number | null,
   distance?: number,
-  perimeter?: {
-    rings: [number, number][][],
-  },
+  perimeterId: number | null,
 }[];
+
+export type PerimeterResponse = {
+  rings: [number, number][][]
+};

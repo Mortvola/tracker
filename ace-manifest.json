@@ -1,5 +1,17 @@
 {
   "commands": {
+    "fix:perimeters": {
+      "settings": {
+        "loadApp": true,
+        "stayAlive": false
+      },
+      "commandPath": "./commands/FixPerimeters",
+      "commandName": "fix:perimeters",
+      "description": "",
+      "args": [],
+      "aliases": [],
+      "flags": []
+    },
     "incidents:update": {
       "settings": {
         "loadApp": true,

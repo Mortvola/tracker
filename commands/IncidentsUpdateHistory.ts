@@ -1,5 +1,5 @@
 import { BaseCommand } from '@adonisjs/core/build/standalone';
-import { Incident } from 'App/Models/WildlandFire';
+import { Incident } from 'App/Models/WildlandFire2';
 import { DateTime } from 'luxon';
 import fetch from 'node-fetch';
 
@@ -7,6 +7,7 @@ type Feature = {
   geometry: { x: number, y: number},
   attributes: {
     GlobalID: string,
+    IrwinID: string,
     IncidentName: string,
     FireDiscoveryDateTime: number,
     ModifiedOnDateTime_dt: number,
@@ -106,6 +107,7 @@ export default class IncidentsUpdateHistory extends BaseCommand {
         if (distance !== null && distance < 1609.34 * 10) {
           incidents.push({
             globalId: properties.GlobalID,
+            irwinId: properties.IrwinID,
             name: properties.IncidentName,
             discoveredAt: DateTime.fromMillis(properties.FireDiscoveryDateTime),
             modifiedAt: DateTime.fromMillis(properties.ModifiedOnDateTime_dt),

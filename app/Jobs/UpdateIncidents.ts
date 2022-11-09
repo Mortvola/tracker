@@ -1,9 +1,11 @@
 import { JobContract, WorkerOptions } from '@ioc:Rocketseat/Bull';
 import { DateTime } from 'luxon';
-import WildlandFire, { Incident } from 'App/Models/WildlandFire';
+import WildlandFire2 from 'App/Models/WildlandFire2';
 import fetch from 'node-fetch';
-import Logger from '@ioc:Adonis/Core/Logger'
+import Logger from '@ioc:Adonis/Core/Logger';
 import Trail from 'App/Models/Trail';
+import Perimeter, { perimetersMatch } from 'App/Models/Perimeter';
+import Database, { TransactionClientContract } from '@ioc:Adonis/Lucid/Database';
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +19,88 @@ import Trail from 'App/Models/Trail';
 | https://docs.bullmq.io/
 */
 
+const baseUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services';
+
+const currentWildFirePerimetersUrl = (irwinId: string) => (
+  `${baseUrl}/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=irwin_IrwinID%3D%27{${irwinId}}%27&outFields=&outSR=4326&f=json`
+);
+
+const currentWildFireLocationsUrl = () => (
+  `${baseUrl}/Current_WildlandFire_Locations/FeatureServer/0/query?where=1%3D1&outFields=IrwinID,DailyAcres,IncidentName,ModifiedOnDateTime_dt,FireDiscoveryDateTime,PercentContained,IncidentTypeCategory,GlobalID&outSR=4326&f=json`
+);
+
+const maxDistanceToTrail = 1609.34 * 10; // 10 miles in meters
+
+type NifcIncident = {
+  attributes: {
+    GlobalID: string,
+    IrwinID: string,
+    IncidentName: string,
+    FireDiscoveryDateTime: number,
+    ModifiedOnDateTime_dt: number,
+    IncidentTypeCategory: string,
+    DailyAcres: number,
+    PercentContained: number,
+    ContainmentDateTime: number,
+  },
+  geometry: { x: number, y: number },
+}
+
+export const finishDateTime = async (globalId: string) => {
+  try {
+    const response = await fetch(
+      `${baseUrl}/Fire_History_Locations_Public/FeatureServer/0/query?where=GlobalID%20%3D%20'{${globalId}}'&outFields=ContainmentDateTime,ControlDateTime,FireOutDateTime,ModifiedOnDateTime_dt,DailyAcres&outSR=4326&f=json`,
+    );
+
+    if (response.ok) {
+      const body = await response.json();
+
+      if (body.features?.length) {
+        if (body.features[0].attributes.ContainmentDateTime) {
+          return DateTime.fromMillis(
+            body.features[0].attributes.ContainmentDateTime,
+          );
+        }
+
+        if (body.features[0].attributes.ControlDateTime) {
+          return DateTime.fromMillis(
+            body.features[0].attributes.ControlDateTime,
+          );
+        }
+
+        if (body.features[0].attributes.FireOutDateTime) {
+          return DateTime.fromMillis(
+            body.features[0].attributes.FireOutDateTime,
+          );
+        }
+
+        const { DailyAcres: dailyAcres } = body.features[0].attributes;
+
+        const modifiedDateTime = DateTime.fromMillis(
+          body.features[0].attributes.ModifiedOnDateTime_dt,
+        );
+
+        const daysSince = DateTime.now().diff(modifiedDateTime, 'days').days;
+
+        if (
+          (dailyAcres < 10 && daysSince > 3)
+          || (dailyAcres <= 100 && daysSince > 8)
+          || daysSince > 14
+        ) {
+          return modifiedDateTime;
+        }
+
+        return null;
+      }
+    }
+  }
+  catch (error) {
+    Logger.error(error.message);
+  }
+
+  return null;
+};
+
 export default class UpdateIncidents implements JobContract {
   public key = 'UpdateIncidents';
 
@@ -28,9 +112,7 @@ export default class UpdateIncidents implements JobContract {
     irwinID: string,
   ): Promise<undefined | { rings: [number, number][][] }> {
     try {
-      const response = await fetch(
-        `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=irwin_IrwinID%3D%27{${irwinID}}%27&outFields=&outSR=4326&f=json`,
-      );
+      const response = await fetch(currentWildFirePerimetersUrl(irwinID));
 
       if (response.ok) {
         const body = await response.json();
@@ -47,139 +129,260 @@ export default class UpdateIncidents implements JobContract {
     return undefined;
   }
 
-  private static async processFeature(feature, trail) {
-    const { attributes: properties } = feature;
-
-    Logger.info(`Started processing feature ${properties.IncidentName}`);
-
-    properties.IncidentName = properties.IncidentName.trim();
+  private static async processPerimeter(
+    feature: NifcIncident,
+    prevIncident: WildlandFire2 | null,
+    trail: Trail,
+    trx: TransactionClientContract,
+  ): Promise<[number | null, number | null]> {
+    const { attributes } = feature;
+    let prevPerimeter: Perimeter | null = null;
+    let perimeterId: number | null = null;
     let shortestDistance: number | null = null;
 
-    feature.perimeter?.rings.forEach((r: [number, number][]) => {
-      const distance = trail?.getPolylineDistanceToTrail(r);
+    if (prevIncident?.perimeterId) {
+      prevPerimeter = await Perimeter.find(prevIncident.perimeterId, { client: trx });
+    }
 
-      if (distance && (shortestDistance === null || distance < shortestDistance)) {
-        shortestDistance = distance;
+    // eslint-disable-next-line no-await-in-loop
+    const perimeter = await UpdateIncidents.getPerimeter(attributes.IrwinID);
+
+    if (perimeter) {
+      if (prevPerimeter && perimetersMatch(prevPerimeter.geometry, perimeter)) {
+        shortestDistance = prevIncident?.properties.distance ?? null;
+        perimeterId = prevIncident?.perimeterId ?? null;
       }
-    });
+      else {
+        const newPerimeter = new Perimeter().useTransaction(trx);
 
+        newPerimeter.fill({
+          geometry: perimeter,
+        });
+
+        await newPerimeter.save();
+
+        perimeterId = newPerimeter.id;
+
+        // Get the closest distance from the trail to the perimeter
+        perimeter.rings.forEach((r: [number, number][]) => {
+          const distance = trail.getPolylineDistanceToTrail(r);
+
+          if (distance && (shortestDistance === null || distance < shortestDistance)) {
+            shortestDistance = distance;
+          }
+        });
+      }
+    }
+    else if (prevIncident && prevIncident.perimeterId !== null) {
+      // If the incident being processed does not have an associated perimeter
+      // but the previous version of the incident did have a perimter
+      // assume the fetching of the perimeter failed and use the perimiter ID
+      // from the previous version
+      perimeterId = prevIncident?.perimeterId ?? null;
+
+      Logger.info(`Latest version of incident ${attributes.GlobalID} did not have a perimeter but the previous version did.`);
+    }
+
+    return [
+      perimeterId,
+      shortestDistance,
+    ];
+  }
+
+  private static async processIncident(
+    feature: NifcIncident,
+    trail: Trail,
+    date: string,
+    trx: TransactionClientContract,
+  ): Promise<void> {
+    const { attributes } = feature;
+
+    Logger.info(`Started processing feature ${attributes.IncidentName}`);
+
+    // eslint-disable-next-line no-await-in-loop
+    const prevIncident = await WildlandFire2
+      .query({ client: trx })
+      .where('globalId', attributes.GlobalID)
+      .orderBy('startTimestamp', 'desc')
+      .first();
+
+    // eslint-disable-next-line prefer-const
+    let [perimeterId, shortestDistance] = await UpdateIncidents.processPerimeter(
+      feature,
+      prevIncident,
+      trail,
+      trx,
+    );
+
+    // Use the distance between the point of origin and the trail if it
+    // is closer.
     const coordinates = feature.geometry;
-    const distance = trail?.getDistanceToTrail([coordinates.x, coordinates.y]);
+    const distance = trail.getDistanceToTrail([coordinates.x, coordinates.y]);
     if (distance && (shortestDistance === null || distance < shortestDistance)) {
       shortestDistance = distance;
     }
 
-    let incident: Incident | null = null;
+    if (shortestDistance !== null && shortestDistance < maxDistanceToTrail) {
+      attributes.IncidentName = attributes.IncidentName.trim();
 
-    if (shortestDistance !== null && shortestDistance < 1609.34 * 10) {
-      incident = {
-        globalId: properties.GlobalID,
-        irwinId: properties.IrwinID,
-        name: properties.IncidentName,
-        discoveredAt: DateTime.fromMillis(properties.FireDiscoveryDateTime),
-        modifiedAt: DateTime.fromMillis(properties.ModifiedOnDateTime_dt),
-        incidentTypeCategory: properties.IncidentTypeCategory,
-        incidentSize: properties.DailyAcres,
-        percentContained: properties.PercentContained,
-        containmentDateTime: properties.ContainmentDateTime
-          ? DateTime.fromMillis(properties.ContainmentDateTime)
-          : null,
-        lat: coordinates.y,
-        lng: coordinates.x,
-        distance: shortestDistance,
-        perimeter: feature.perimeter,
-      };
+      const discoveredAt = DateTime.fromMillis(attributes.FireDiscoveryDateTime);
+      const modifiedAt = DateTime.fromMillis(attributes.ModifiedOnDateTime_dt);
+      const containmentDateTime = attributes.ContainmentDateTime
+        ? DateTime.fromMillis(attributes.ContainmentDateTime)
+        : null;
+
+      if (
+        !prevIncident
+        || (
+          prevIncident.properties.name !== attributes.IncidentName
+          || !prevIncident.properties.discoveredAt.equals(discoveredAt)
+          || !prevIncident.properties.modifiedAt.equals(modifiedAt)
+          || prevIncident.properties.incidentTypeCategory !== attributes.IncidentTypeCategory
+          || prevIncident.properties.incidentSize !== attributes.DailyAcres
+          || prevIncident.properties.percentContained !== attributes.PercentContained
+          || (
+            (prevIncident.properties.containmentDateTime === null
+              && containmentDateTime !== null)
+            || (prevIncident.properties.containmentDateTime !== null
+              && containmentDateTime === null)
+            || (
+              prevIncident.properties.containmentDateTime !== null
+              && containmentDateTime !== null
+              && prevIncident.properties.containmentDateTime.equals(containmentDateTime)
+            )
+          )
+          || prevIncident.properties.lat !== coordinates.y
+          || prevIncident.properties.lng !== coordinates.x
+          || prevIncident.properties.distance !== shortestDistance
+          || prevIncident.perimeterId !== perimeterId
+        )
+      ) {
+        if (prevIncident) {
+          if (prevIncident.properties.name !== attributes.IncidentName) {
+            Logger.info('names are different', prevIncident.id, prevIncident.properties.name, attributes.IncidentName);
+          }
+          if (!prevIncident.properties.discoveredAt.equals(discoveredAt)) {
+            Logger.info('discoveredAt are different', prevIncident.id, prevIncident.properties.discoveredAt, discoveredAt);
+          }
+          if (!prevIncident.properties.modifiedAt.equals(modifiedAt)) {
+            Logger.info('modifiedAt are different', prevIncident.id, prevIncident.properties.modifiedAt, modifiedAt);
+          }
+          if (prevIncident.properties.incidentTypeCategory !== attributes.IncidentTypeCategory) {
+            Logger.info('incidentTypeCategory are different', prevIncident.id, prevIncident.properties.incidentTypeCategory, attributes.IncidentTypeCategory);
+          }
+          if (prevIncident.properties.incidentSize !== attributes.DailyAcres) {
+            Logger.info('incidentSize are different', prevIncident.id, prevIncident.properties.incidentSize, attributes.DailyAcres);
+          }
+          if (prevIncident.properties.percentContained !== attributes.PercentContained) {
+            Logger.info('percentContained are different', prevIncident.id, prevIncident.properties.percentContained, attributes.PercentContained);
+          }
+          if (
+            (prevIncident.properties.containmentDateTime === null
+              && containmentDateTime !== null)
+            || (prevIncident.properties.containmentDateTime !== null
+              && containmentDateTime === null)
+            || (
+              prevIncident.properties.containmentDateTime !== null
+              && containmentDateTime !== null
+              && prevIncident.properties.containmentDateTime.equals(containmentDateTime)
+            )
+          ) {
+            Logger.info('containmentDateTime are different', prevIncident.id, prevIncident.properties.containmentDateTime, containmentDateTime);
+          }
+          if (prevIncident.properties.lat !== coordinates.y) {
+            Logger.info('lat are different', prevIncident.id, prevIncident.properties.lat, coordinates.y);
+          }
+          if (prevIncident.properties.lng !== coordinates.x) {
+            Logger.info('lng are different', prevIncident.id, prevIncident.properties.lng, coordinates.x);
+          }
+          if (prevIncident.properties.distance !== shortestDistance) {
+            Logger.info('distance are different', prevIncident.id, prevIncident.properties.distance, shortestDistance);
+          }
+          if (prevIncident.perimeterId !== perimeterId) {
+            Logger.info('perimeterId are different', prevIncident.id, prevIncident.perimeterId, perimeterId);
+          }
+        }
+        const newIncident = new WildlandFire2().useTransaction(trx);
+
+        newIncident.fill({
+          globalId: attributes.GlobalID,
+          irwinId: attributes.IrwinID,
+          properties: {
+            name: attributes.IncidentName,
+            discoveredAt,
+            modifiedAt,
+            incidentTypeCategory: attributes.IncidentTypeCategory,
+            incidentSize: attributes.DailyAcres,
+            percentContained: attributes.PercentContained,
+            containmentDateTime,
+            lat: coordinates.y,
+            lng: coordinates.x,
+            distance: shortestDistance,
+          },
+          perimeterId,
+          startTimestamp: DateTime.fromISO(date),
+        });
+
+        await newIncident.save();
+
+        // If there was a previous version of the incident then set
+        // the end date to be that of the start date of the new version.
+        if (prevIncident) {
+          prevIncident.merge({
+            endTimestamp: DateTime.fromISO(date),
+          });
+
+          await prevIncident.save();
+        }
+      }
     }
 
-    Logger.info(`Finished processing feature ${properties.IncidentName}`);
-
-    return incident;
+    Logger.info(`Finished processing feature ${attributes.IncidentName}`);
   }
 
-  private static async getIncidents(
-    trail: Trail,
-  ): Promise<void> {
+  private static async getIncidents(): Promise<NifcIncident[]> {
     type IncidentResponse = {
-      features: {
-        attributes: {
-          IrwinID: string,
-          GlobalID: string,
-          IncidentName: string,
-          FireDiscoveryDateTime: number,
-          ModifiedOnDateTime_dt: number,
-          IncidentTypeCategory: string,
-          DailyAcres: number,
-          PercentContained: number,
-          ContainmentDateTime: number,
-        },
-        perimeter?: {
-          rings: [number, number][][],
-        },
-        geometry: { x: number, y: number },
-      }[],
+      features: NifcIncident[],
     }
 
-    const response = await fetch(
-      'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query?where=1%3D1&outFields=IrwinID,DailyAcres,IncidentName,ModifiedOnDateTime_dt,FireDiscoveryDateTime,PercentContained,IncidentTypeCategory,GlobalID&outSR=4326&f=json',
-    );
+    const response = await fetch(currentWildFireLocationsUrl());
 
     if (response.ok) {
       const body = (await response.json()) as IncidentResponse;
 
-      const date = DateTime.local().setZone('America/Los_Angeles').toISODate();
-      let wf = await WildlandFire.findBy('date', date);
+      // const date = DateTime.local().setZone('America/Los_Angeles').toISODate();
+      // let wf = await WildlandFire.findBy('date', date);
 
       Logger.info(`Number of features: ${body.features.length}`);
 
-      const featurePromises: Promise<Incident | null>[] = [];
-
-      // eslint-disable-next-line no-restricted-syntax
-      for (const feature of body.features) {
-        // eslint-disable-next-line no-await-in-loop
-        feature.perimeter = await UpdateIncidents.getPerimeter(feature.attributes.IrwinID);
-
-        if (!feature.perimeter) {
-          const previousIncident = wf?.incidents.find(
-            (i) => i.globalId === feature.attributes.GlobalID,
-          );
-
-          if (previousIncident?.perimeter) {
-            feature.perimeter = previousIncident.perimeter;
-          }
-        }
-
-        if (feature.perimeter) {
-          Logger.info(`Perimeter fetched for feature ${feature.attributes.IncidentName}`);
-        }
-        else {
-          Logger.info(`Perimeter NOT fetched for feature ${feature.attributes.IncidentName}`);
-        }
-
-        featurePromises.push(UpdateIncidents.processFeature(feature, trail));
-      }
-
-      // eslint-disable-next-line no-restricted-syntax
-      const incidents = (await Promise.all(featurePromises))
-        .filter((i) => i !== null) as Incident[];
-
-      if (wf) {
-        await wf
-          .merge({
-            incidents,
-          })
-          .save();
-      }
-      else {
-        wf = new WildlandFire();
-
-        await wf
-          .fill({
-            date,
-            incidents,
-          })
-          .save();
-      }
+      return body.features;
     }
+
+    return [];
+  }
+
+  private static async getActiveIncidents(
+    trx: TransactionClientContract,
+  ): Promise<Map<string, WildlandFire2>> {
+    const map = new Map<string, WildlandFire2>();
+    const incidents = await WildlandFire2
+      .query({ client: trx })
+      .whereNull('endTimestamp');
+
+    incidents.forEach((i) => {
+      map.set(i.globalId, i);
+    });
+
+    return map;
+  }
+
+  private static async updateEndTimestamp(incident: WildlandFire2): Promise<void> {
+    incident.endTimestamp = await finishDateTime(incident.globalId);
+
+    // if (incident.endTimestamp === null) {
+    //   incident.endTimestamp = DateTime.now();
+    // }
+    await incident.save();
   }
 
   private static async updateIncidents() {
@@ -188,8 +391,51 @@ export default class UpdateIncidents implements JobContract {
 
       if (trail) {
         Logger.info('Updating wildland fire incidents');
-        await UpdateIncidents.getIncidents(trail);
+        const incidents = await UpdateIncidents.getIncidents();
+
+        const date = DateTime.local().setZone('America/Los_Angeles').toISODate();
+
+        const trx = await Database.transaction();
+
+        const activeIncidents = await UpdateIncidents.getActiveIncidents(trx);
+
+        try {
+        // Iterate over the incidents (each feature is an incident)
+        // eslint-disable-next-line no-restricted-syntax
+          await Promise.all(incidents.map(async (incident) => {
+            await UpdateIncidents.processIncident(incident, trail, date, trx);
+            activeIncidents.delete(incident.attributes.GlobalID);
+          }));
+
+          // Find end dates for the active incidents that were not found in
+          // the data set fetched from NIFC.
+          // eslint-disable-next-line no-restricted-syntax
+          if (activeIncidents.size > 0) {
+            Logger.info(`${activeIncidents.size} active incidents not found. Updating end timestamps.`);
+            const promises: Promise<void>[] = [];
+            activeIncidents.forEach((incident) => {
+              promises.push(UpdateIncidents.updateEndTimestamp(incident));
+            });
+            await Promise.all(promises);
+
+            activeIncidents.forEach((incident) => {
+              if (incident.endTimestamp === null) {
+                Logger.info(`${incident.globalId} incident not found and has no end timetamp`);
+              }
+            });
+          }
+
+          await trx.commit();
+        }
+        catch (error) {
+          Logger.error(error);
+          await trx.rollback();
+        }
+
         Logger.info('Completed updating wildland fire incidents');
+      }
+      else {
+        Logger.error('Trail not found');
       }
     }
     catch (error) {

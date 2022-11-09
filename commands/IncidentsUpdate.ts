@@ -1,6 +1,6 @@
 import { BaseCommand } from '@adonisjs/core/build/standalone';
 import { getExtents } from 'App/Models/Math';
-import { Incident } from 'App/Models/WildlandFire';
+import { Incident } from 'App/Models/WildlandFire2';
 import { DateTime } from 'luxon';
 import fetch from 'node-fetch';
 
@@ -101,6 +101,7 @@ export default class IncidentsUpdate extends BaseCommand {
 
         if (shortestDistance !== null && shortestDistance < 1609.34 * 10) {
           incident = {
+            irwinId: properties.IrwinID,
             globalId: properties.GlobalID,
             name: properties.IncidentName,
             discoveredAt: DateTime.fromMillis(properties.FireDiscoveryDateTime),
