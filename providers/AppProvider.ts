@@ -1,5 +1,6 @@
 /* eslint-disable class-methods-use-this */
 import { ApplicationContract } from '@ioc:Adonis/Core/Application';
+import ApplePushNotifications from './ApplePushNotifications';
 
 export default class AppProvider {
   // eslint-disable-next-line no-useless-constructor
@@ -17,6 +18,11 @@ export default class AppProvider {
     const { MyUserProvider } = await import('./MyUserProvider');
 
     Auth.extend('provider', 'myProvider', (_, __, config) => new MyUserProvider(config, Hash));
+
+    // Register the Apple Push Notifications binding.
+    this.app.container.singleton('ApplePushNotifications', () => {
+      return new ApplePushNotifications();
+    })
   }
 
   public async ready() {

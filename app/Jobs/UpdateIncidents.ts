@@ -6,6 +6,7 @@ import Logger from '@ioc:Adonis/Core/Logger';
 import Trail from 'App/Models/Trail';
 import Perimeter, { perimetersMatch } from 'App/Models/Perimeter';
 import Database, { TransactionClientContract } from '@ioc:Adonis/Lucid/Database';
+import applePushNotifications from '@ioc:ApplePushNotifications';
 
 /*
 |--------------------------------------------------------------------------
@@ -196,6 +197,7 @@ export default class UpdateIncidents implements JobContract {
     trx: TransactionClientContract,
   ): Promise<void> {
     const { attributes } = feature;
+    let incidentsAdded = 0;
 
     Logger.info(`Started processing feature ${attributes.IncidentName}`);
 
@@ -302,6 +304,7 @@ export default class UpdateIncidents implements JobContract {
             Logger.info('perimeterId are different', prevIncident.id, prevIncident.perimeterId, perimeterId);
           }
         }
+
         const newIncident = new WildlandFire2().useTransaction(trx);
 
         newIncident.fill({
@@ -334,10 +337,16 @@ export default class UpdateIncidents implements JobContract {
 
           await prevIncident.save();
         }
+
+        incidentsAdded += 1;
       }
     }
 
     Logger.info(`Finished processing feature ${attributes.IncidentName}`);
+
+    if (incidentsAdded > 0) {
+      await applePushNotifications.sendPushNotifications();
+    }
   }
 
   private static async getIncidents(): Promise<NifcIncident[]> {

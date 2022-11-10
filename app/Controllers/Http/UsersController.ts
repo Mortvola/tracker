@@ -7,6 +7,7 @@ import { FeedResponse, PointResponse, UserResponse } from 'Common/ResponseTypes'
 import Authentication from 'App/Models/Authentication';
 import Database from '@ioc:Adonis/Lucid/Database';
 import FieldErrorReporter from 'App/Validators/Reporters/FieldErrorReporter';
+import ApnsToken from 'App/Models/ApnsToken';
 
 export default class UsersController {
   public async get({
@@ -213,6 +214,30 @@ export default class UsersController {
     catch (error) {
       trx.rollback();
       throw error;
+    }
+  }
+
+  public async addApnsToken({
+    request,
+  }: HttpContextContract): Promise<void> {
+    const requestData = await request.validate({
+      schema: schema.create({
+        token: schema.string([
+          rules.trim(),
+          rules.minLength(1),
+        ]),
+      }),
+    });
+
+    const existingToken = await ApnsToken
+      .query()
+      .where('token', requestData.token)
+      .first();
+
+    if (!existingToken) {
+      ApnsToken.create({
+        token: requestData.token,
+      });
     }
   }
 }
