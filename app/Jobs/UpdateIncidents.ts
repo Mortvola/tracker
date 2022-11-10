@@ -201,7 +201,7 @@ export default class UpdateIncidents implements JobContract {
     const { attributes } = feature;
     let incidentChange: INCIDENT_CHANGE_TYPE = 'NONE';
 
-    Logger.info(`Started processing feature ${attributes.IncidentName}`);
+    // Logger.info(`Started processing feature ${attributes.IncidentName}`);
 
     // eslint-disable-next-line no-await-in-loop
     const prevIncident = await WildlandFire2
@@ -347,7 +347,7 @@ export default class UpdateIncidents implements JobContract {
       }
     }
 
-    Logger.info(`Finished processing feature ${attributes.IncidentName}`);
+    // Logger.info(`Finished processing feature ${attributes.IncidentName}`);
 
     return incidentChange;
   }

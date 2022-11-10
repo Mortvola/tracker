@@ -20,12 +20,14 @@ export default class WildlandFiresController {
 
     const query = `
       select distinct on(irwin_id)
+        global_id as "globalId",
         irwin_id as "irwinId",
         properties,
         perimeter_id as "perimeterId"
       from wildland_fire2s
       where start_timestamp <= CAST('${date}' AS DATE) + 1
       and coalesce(end_timestamp, now() at time zone 'UTC') >= CAST('${date}' AS date)
+      and irwin_id is not null
       order by irwin_id, start_timestamp desc, id desc
     `;
 
