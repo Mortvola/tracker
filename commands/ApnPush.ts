@@ -30,6 +30,6 @@ export default class ApnPush extends BaseCommand {
 
   // eslint-disable-next-line class-methods-use-this
   public async run() {
-    await applePushNotifications.sendPushNotifications();
+    await applePushNotifications.sendPushNotifications(0, 0);
   }
 }

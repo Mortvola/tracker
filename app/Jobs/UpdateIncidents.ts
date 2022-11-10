@@ -102,6 +102,8 @@ export const finishDateTime = async (globalId: string) => {
   return null;
 };
 
+type INCIDENT_CHANGE_TYPE = 'NONE' | 'UPDATED' | 'ADDED'
+
 export default class UpdateIncidents implements JobContract {
   public key = 'UpdateIncidents';
 
@@ -195,9 +197,9 @@ export default class UpdateIncidents implements JobContract {
     trail: Trail,
     date: string,
     trx: TransactionClientContract,
-  ): Promise<void> {
+  ): Promise<INCIDENT_CHANGE_TYPE> {
     const { attributes } = feature;
-    let incidentsAdded = 0;
+    let incidentChange: INCIDENT_CHANGE_TYPE = 'NONE';
 
     Logger.info(`Started processing feature ${attributes.IncidentName}`);
 
@@ -336,17 +338,18 @@ export default class UpdateIncidents implements JobContract {
           });
 
           await prevIncident.save();
-        }
 
-        incidentsAdded += 1;
+          incidentChange = 'UPDATED';
+        }
+        else {
+          incidentChange = 'ADDED';
+        }
       }
     }
 
     Logger.info(`Finished processing feature ${attributes.IncidentName}`);
 
-    if (incidentsAdded > 0) {
-      await applePushNotifications.sendPushNotifications();
-    }
+    return incidentChange;
   }
 
   private static async getIncidents(): Promise<NifcIncident[]> {
@@ -409,10 +412,21 @@ export default class UpdateIncidents implements JobContract {
         const activeIncidents = await UpdateIncidents.getActiveIncidents(trx);
 
         try {
-        // Iterate over the incidents (each feature is an incident)
-        // eslint-disable-next-line no-restricted-syntax
+          let incidentsAdded = 0;
+          let incidentsUpdated = 0;
+
+          // Iterate over the incidents (each feature is an incident)
+          // eslint-disable-next-line no-restricted-syntax
           await Promise.all(incidents.map(async (incident) => {
-            await UpdateIncidents.processIncident(incident, trail, date, trx);
+            const changeType = await UpdateIncidents.processIncident(incident, trail, date, trx);
+
+            if (changeType === 'ADDED') {
+              incidentsAdded += 1;
+            }
+            else if (changeType === 'UPDATED') {
+              incidentsUpdated += 1;
+            }
+
             activeIncidents.delete(incident.attributes.GlobalID);
           }));
 
@@ -435,6 +449,10 @@ export default class UpdateIncidents implements JobContract {
           }
 
           await trx.commit();
+
+          if (incidentsAdded > 0 || incidentsUpdated > 0) {
+            await applePushNotifications.sendPushNotifications(incidentsAdded, incidentsUpdated);
+          }
         }
         catch (error) {
           Logger.error(error);

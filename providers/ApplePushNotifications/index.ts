@@ -19,7 +19,10 @@ class ApplePushNotifications {
 
   providerJwt: string | null = null;
 
-  public async sendPushNotifications() {
+  public async sendPushNotifications(
+    incidentsAdded: number,
+    incidentsUpdated: number,
+  ) {
     const { default: ApnsToken } = await import('App/Models/ApnsToken');
 
     const { fetch, disconnectAll } = context();
@@ -38,8 +41,8 @@ class ApplePushNotifications {
       const notification = {
         aps: {
           alert: {
-            title: 'Wildfire Update',
-            body: 'This is a test',
+            title: 'Trail Alerts',
+            body: `${incidentsAdded} incidents have been added and ${incidentsUpdated} have been updated.`,
           },
           sound: 'default',
         },
