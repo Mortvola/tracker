@@ -412,19 +412,28 @@ export default class UpdateIncidents implements JobContract {
         const activeIncidents = await UpdateIncidents.getActiveIncidents(trx);
 
         try {
-          let incidentsAdded = 0;
-          let incidentsUpdated = 0;
-
-          // Iterate over the incidents (each feature is an incident)
+          // Iterate over the incidents
           // eslint-disable-next-line no-restricted-syntax
           await Promise.all(incidents.map(async (incident) => {
             const changeType = await UpdateIncidents.processIncident(incident, trail, date, trx);
 
             if (changeType === 'ADDED') {
-              incidentsAdded += 1;
+              await applePushNotifications.sendPushNotifications(
+                'Incident added', {
+                  globalId: incident.attributes.GlobalID,
+                  lat: incident.geometry.y,
+                  lng: incident.geometry.x,
+                },
+              );
             }
             else if (changeType === 'UPDATED') {
-              incidentsUpdated += 1;
+              await applePushNotifications.sendPushNotifications(
+                'Incident updated', {
+                  globalId: incident.attributes.GlobalID,
+                  lat: incident.geometry.y,
+                  lng: incident.geometry.x,
+                },
+              );
             }
 
             activeIncidents.delete(incident.attributes.GlobalID);
@@ -449,10 +458,6 @@ export default class UpdateIncidents implements JobContract {
           }
 
           await trx.commit();
-
-          if (incidentsAdded > 0 || incidentsUpdated > 0) {
-            await applePushNotifications.sendPushNotifications(incidentsAdded, incidentsUpdated);
-          }
         }
         catch (error) {
           Logger.error(error);

@@ -1,5 +1,6 @@
-import { BaseCommand } from '@adonisjs/core/build/standalone';
+import { args, BaseCommand, flags } from '@adonisjs/core/build/standalone';
 import applePushNotifications from '@ioc:ApplePushNotifications';
+import WildlandFire2 from 'App/Models/WildlandFire2';
 
 export default class ApnPush extends BaseCommand {
   /**
@@ -11,6 +12,12 @@ export default class ApnPush extends BaseCommand {
    * Command description is displayed in the "help" output
    */
   public static description = '';
+
+  @args.string({ description: 'The global ID of the incident' })
+  public globalId: string;
+
+  @flags.boolean({ alias: 'u', description: 'Indicates the notification is an update' })
+  public update: boolean;
 
   public static settings = {
     /**
@@ -30,6 +37,22 @@ export default class ApnPush extends BaseCommand {
 
   // eslint-disable-next-line class-methods-use-this
   public async run() {
-    await applePushNotifications.sendPushNotifications(0, 0);
+    const incident = await WildlandFire2.findByOrFail('globalId', this.globalId);
+    if (this.update) {
+      await applePushNotifications.sendPushNotifications(
+        'Incident Updated', {
+          globalId: this.globalId,
+          lat: incident.properties.lat,
+          lng: incident.properties.lng,
+        });
+    }
+    else {
+      await applePushNotifications.sendPushNotifications(
+        'Incident Added', {
+          globalId: this.globalId,
+          lat: incident.properties.lat,
+          lng: incident.properties.lng,
+        });
+    }
   }
 }

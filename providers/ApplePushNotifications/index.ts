@@ -20,8 +20,8 @@ class ApplePushNotifications {
   providerJwt: string | null = null;
 
   public async sendPushNotifications(
-    incidentsAdded: number,
-    incidentsUpdated: number,
+    body: unknown,
+    attributes?: unknown,
   ) {
     const { default: ApnsToken } = await import('App/Models/ApnsToken');
 
@@ -42,10 +42,11 @@ class ApplePushNotifications {
         aps: {
           alert: {
             title: 'Trail Alerts',
-            body: `${incidentsAdded} incidents have been added and ${incidentsUpdated} have been updated.`,
+            body,
           },
           sound: 'default',
         },
+        attributes,
       };
 
       try {
