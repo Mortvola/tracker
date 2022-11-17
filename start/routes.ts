@@ -67,6 +67,7 @@ Route.group(() => {
   Route.get('/heatmap/:year/:day', 'HeatmapsController.get');
   Route.get('/heatmap-list', 'HeatmapsController.getList');
   Route.get('/wildland-fires/:year/:day', 'WildlandFiresController.get');
+  Route.get('/wildland-fires/:globalId', 'WildlandFiresController.getIncident');
   Route.get('/perimeter/:id', 'WildlandFiresController.getPerimeter');
 
   Route.post('/apns-token', 'UsersController.addApnsToken');

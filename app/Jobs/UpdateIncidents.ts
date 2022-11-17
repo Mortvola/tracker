@@ -1,6 +1,6 @@
 import { JobContract, WorkerOptions } from '@ioc:Rocketseat/Bull';
 import { DateTime } from 'luxon';
-import WildlandFire2 from 'App/Models/WildlandFire2';
+import WildlandFire2, { Incident } from 'App/Models/WildlandFire2';
 import fetch from 'node-fetch';
 import Logger from '@ioc:Adonis/Core/Logger';
 import Trail from 'App/Models/Trail';
@@ -197,9 +197,8 @@ export default class UpdateIncidents implements JobContract {
     trail: Trail,
     date: string,
     trx: TransactionClientContract,
-  ): Promise<INCIDENT_CHANGE_TYPE> {
+  ): Promise<[INCIDENT_CHANGE_TYPE, WildlandFire2 | null]> {
     const { attributes } = feature;
-    let incidentChange: INCIDENT_CHANGE_TYPE = 'NONE';
 
     // Logger.info(`Started processing feature ${attributes.IncidentName}`);
 
@@ -339,17 +338,16 @@ export default class UpdateIncidents implements JobContract {
 
           await prevIncident.save();
 
-          incidentChange = 'UPDATED';
+          return ['UPDATED', newIncident];
         }
-        else {
-          incidentChange = 'ADDED';
-        }
+
+        return ['ADDED', newIncident];
       }
     }
 
     // Logger.info(`Finished processing feature ${attributes.IncidentName}`);
 
-    return incidentChange;
+    return ['NONE', null];
   }
 
   private static async getIncidents(): Promise<NifcIncident[]> {
@@ -415,28 +413,42 @@ export default class UpdateIncidents implements JobContract {
           // Iterate over the incidents
           // eslint-disable-next-line no-restricted-syntax
           await Promise.all(incidents.map(async (incident) => {
-            const changeType = await UpdateIncidents.processIncident(incident, trail, date, trx);
+            const [
+              changeType,
+              wildlandFireIncident,
+            ] = await UpdateIncidents.processIncident(incident, trail, date, trx);
 
-            if (changeType === 'ADDED') {
-              await applePushNotifications.sendPushNotifications(
-                'Incident added', {
-                  globalId: incident.attributes.GlobalID,
-                  lat: incident.geometry.y,
-                  lng: incident.geometry.x,
-                },
-              );
-            }
-            else if (changeType === 'UPDATED') {
-              await applePushNotifications.sendPushNotifications(
-                'Incident updated', {
-                  globalId: incident.attributes.GlobalID,
-                  lat: incident.geometry.y,
-                  lng: incident.geometry.x,
-                },
-              );
-            }
+            if (wildlandFireIncident !== null) {
+              const incidentInfo: Incident = {
+                globalId: wildlandFireIncident.globalId,
+                irwinId: wildlandFireIncident.irwinId,
+                discoveredAt: wildlandFireIncident.properties.discoveredAt,
+                modifiedAt: wildlandFireIncident.properties.modifiedAt,
+                incidentTypeCategory: wildlandFireIncident.properties.incidentTypeCategory,
+                incidentSize: wildlandFireIncident.properties.incidentSize,
+                percentContained: wildlandFireIncident.properties.percentContained,
+                containmentDateTime: wildlandFireIncident.properties.containmentDateTime,
+                lat: wildlandFireIncident.properties.lat,
+                lng: wildlandFireIncident.properties.lng,
+                name: wildlandFireIncident.properties.name,
+                perimeterId: wildlandFireIncident.perimeterId,
+              };
 
-            activeIncidents.delete(incident.attributes.GlobalID);
+              if (changeType === 'ADDED') {
+                await applePushNotifications.sendPushNotifications(
+                  `Incident ${incidentInfo.name} added.`,
+                  incidentInfo,
+                );
+              }
+              else if (changeType === 'UPDATED') {
+                await applePushNotifications.sendPushNotifications(
+                  `Incident ${incidentInfo.name} updated.`,
+                  incidentInfo,
+                );
+              }
+
+              activeIncidents.delete(incident.attributes.GlobalID);   
+            }
           }));
 
           // Find end dates for the active incidents that were not found in

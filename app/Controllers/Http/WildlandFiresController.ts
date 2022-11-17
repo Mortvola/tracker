@@ -2,7 +2,7 @@
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
 import Database from '@ioc:Adonis/Lucid/Database';
 import Perimeter, { PerimeterGeometry } from 'App/Models/Perimeter';
-import { Incident, IncidentProperties } from 'App/Models/WildlandFire2';
+import WildlandFire2, { Incident, IncidentProperties } from 'App/Models/WildlandFire2';
 import { DateTime } from 'luxon';
 
 export default class WildlandFiresController {
@@ -57,6 +57,28 @@ export default class WildlandFiresController {
     }));
 
     return incidents;
+  }
+
+  public async getIncident({ params }: HttpContextContract): Promise<Incident> {
+    const { globalId } = params;
+
+    const wf = await WildlandFire2.findByOrFail('globalId', globalId);
+
+    return {
+      irwinId: wf.irwinId,
+      globalId: wf.globalId,
+      lat: wf.properties.lat,
+      lng: wf.properties.lng,
+      name: wf.properties.name,
+      discoveredAt: wf.properties.discoveredAt,
+      modifiedAt: wf.properties.modifiedAt,
+      incidentTypeCategory: wf.properties.incidentTypeCategory,
+      incidentSize: wf.properties.incidentSize,
+      percentContained: wf.properties.percentContained,
+      containmentDateTime: wf.properties.containmentDateTime,
+      distance: wf.properties.distance,
+      perimeterId: wf.perimeterId,
+    };
   }
 
   public async getPerimeter({ params }: HttpContextContract): Promise<PerimeterGeometry> {
