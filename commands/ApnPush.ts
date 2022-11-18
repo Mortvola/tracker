@@ -52,6 +52,7 @@ export default class ApnPush extends BaseCommand {
       lng: incident.properties.lng,
       name: incident.properties.name,
       perimeterId: incident.perimeterId,
+      distance: incident.properties.incidentSize ?? 0,
     };
 
     if (this.update) {

@@ -432,6 +432,7 @@ export default class UpdateIncidents implements JobContract {
                 lng: wildlandFireIncident.properties.lng,
                 name: wildlandFireIncident.properties.name,
                 perimeterId: wildlandFireIncident.perimeterId,
+                distance: wildlandFireIncident.properties.incidentSize ?? 0,
               };
 
               if (changeType === 'ADDED') {

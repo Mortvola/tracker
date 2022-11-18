@@ -27,7 +27,7 @@ export type Incident = {
   incidentSize: number | null,
   percentContained: number | null,
   containmentDateTime: DateTime | null,
-  distance?: number,
+  distance: number,
   perimeter?: PerimeterGeometry | null
   perimeterId?: number | null,
 };

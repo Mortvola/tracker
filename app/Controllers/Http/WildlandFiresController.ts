@@ -52,7 +52,7 @@ export default class WildlandFiresController {
       incidentSize: r.properties.incidentSize,
       percentContained: r.properties.percentContained,
       containmentDateTime: r.properties.containmentDateTime,
-      distance: r.properties.distance,
+      distance: r.properties.distance ?? 0,
       perimeterId: r.perimeterId,
     }));
 
@@ -76,7 +76,7 @@ export default class WildlandFiresController {
       incidentSize: wf.properties.incidentSize,
       percentContained: wf.properties.percentContained,
       containmentDateTime: wf.properties.containmentDateTime,
-      distance: wf.properties.distance,
+      distance: wf.properties.distance ?? 0,
       perimeterId: wf.perimeterId,
     };
   }
