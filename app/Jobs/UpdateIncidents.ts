@@ -121,7 +121,7 @@ export const sendPushNotification = async (
     lng: wildlandFireIncident.properties.lng,
     name: wildlandFireIncident.properties.name,
     perimeterId: wildlandFireIncident.perimeterId,
-    distance: wildlandFireIncident.properties.incidentSize ?? 0,
+    distance: wildlandFireIncident.properties.distance ?? 0,
   };
 
   if (changeType === 'ADDED') {

@@ -37,7 +37,10 @@ export default class ApnPush extends BaseCommand {
 
   // eslint-disable-next-line class-methods-use-this
   public async run() {
-    const incident = await WildlandFire2.findByOrFail('globalId', this.globalId);
+    const incident = await WildlandFire2
+      .query()
+      .where('globalId', this.globalId).orderBy('updatedAt', 'desc')
+      .firstOrFail();
 
     await sendPushNotification(incident, this.update ? 'UPDATED' : 'ADDED');
   }
