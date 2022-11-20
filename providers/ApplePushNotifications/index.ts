@@ -20,8 +20,10 @@ class ApplePushNotifications {
   providerJwt: string | null = null;
 
   public async sendPushNotifications(
+    title: string,
     body: unknown,
     attributes?: unknown,
+    collapseId?: string,
   ) {
     const { default: ApnsToken } = await import('App/Models/ApnsToken');
 
@@ -41,7 +43,7 @@ class ApplePushNotifications {
       const notification = {
         aps: {
           alert: {
-            title: 'Trail Alerts',
+            title,
             body,
           },
           sound: 'default',
@@ -61,7 +63,7 @@ class ApplePushNotifications {
             'apns-priority': '5',
             'apns-topic': 'app.hikerheatmap',
             'apns-push-type': 'alert',
-            'apns-collapse-id': 'new-transactions',
+            'apns-collapse-id': collapseId,
           },
         });
 

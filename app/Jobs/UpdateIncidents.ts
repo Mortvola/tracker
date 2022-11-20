@@ -104,6 +104,47 @@ export const finishDateTime = async (globalId: string) => {
 
 type INCIDENT_CHANGE_TYPE = 'NONE' | 'UPDATED' | 'ADDED'
 
+export const sendPushNotification = async (
+  wildlandFireIncident: WildlandFire2,
+  changeType: INCIDENT_CHANGE_TYPE,
+) => {
+  const incidentInfo: Incident = {
+    globalId: wildlandFireIncident.globalId,
+    irwinId: wildlandFireIncident.irwinId,
+    discoveredAt: wildlandFireIncident.properties.discoveredAt,
+    modifiedAt: wildlandFireIncident.properties.modifiedAt,
+    incidentTypeCategory: wildlandFireIncident.properties.incidentTypeCategory,
+    incidentSize: wildlandFireIncident.properties.incidentSize,
+    percentContained: wildlandFireIncident.properties.percentContained,
+    containmentDateTime: wildlandFireIncident.properties.containmentDateTime,
+    lat: wildlandFireIncident.properties.lat,
+    lng: wildlandFireIncident.properties.lng,
+    name: wildlandFireIncident.properties.name,
+    perimeterId: wildlandFireIncident.perimeterId,
+    distance: wildlandFireIncident.properties.incidentSize ?? 0,
+  };
+
+  if (changeType === 'ADDED') {
+    await applePushNotifications.sendPushNotifications(
+      incidentInfo.incidentTypeCategory === 'WF'
+        ? 'New Wild Fire'
+        : 'New Prescribed Fire',
+      `The "${incidentInfo.name}" incident has been added.`,
+      incidentInfo,
+    );
+  }
+  else if (changeType === 'UPDATED') {
+    await applePushNotifications.sendPushNotifications(
+      incidentInfo.incidentTypeCategory === 'WF'
+        ? 'Update to Wild Fire'
+        : 'Update to Prescribed Fire',
+      `The "${incidentInfo.name}" incident has been updated.`,
+      incidentInfo,
+      wildlandFireIncident.globalId,
+    );
+  }
+};
+
 export default class UpdateIncidents implements JobContract {
   public key = 'UpdateIncidents';
 
@@ -267,9 +308,9 @@ export default class UpdateIncidents implements JobContract {
           if (!prevIncident.properties.discoveredAt.equals(discoveredAt)) {
             Logger.info('discoveredAt are different', prevIncident.id, prevIncident.properties.discoveredAt, discoveredAt);
           }
-          if (!prevIncident.properties.modifiedAt.equals(modifiedAt)) {
-            Logger.info('modifiedAt are different', prevIncident.id, prevIncident.properties.modifiedAt, modifiedAt);
-          }
+          // if (!prevIncident.properties.modifiedAt.equals(modifiedAt)) {
+          //   Logger.info('modifiedAt are different', prevIncident.id, prevIncident.properties.modifiedAt, modifiedAt);
+          // }
           if (prevIncident.properties.incidentTypeCategory !== attributes.IncidentTypeCategory) {
             Logger.info('incidentTypeCategory are different', prevIncident.id, prevIncident.properties.incidentTypeCategory, attributes.IncidentTypeCategory);
           }
@@ -419,36 +460,9 @@ export default class UpdateIncidents implements JobContract {
             ] = await UpdateIncidents.processIncident(incident, trail, date, trx);
 
             if (wildlandFireIncident !== null) {
-              const incidentInfo: Incident = {
-                globalId: wildlandFireIncident.globalId,
-                irwinId: wildlandFireIncident.irwinId,
-                discoveredAt: wildlandFireIncident.properties.discoveredAt,
-                modifiedAt: wildlandFireIncident.properties.modifiedAt,
-                incidentTypeCategory: wildlandFireIncident.properties.incidentTypeCategory,
-                incidentSize: wildlandFireIncident.properties.incidentSize,
-                percentContained: wildlandFireIncident.properties.percentContained,
-                containmentDateTime: wildlandFireIncident.properties.containmentDateTime,
-                lat: wildlandFireIncident.properties.lat,
-                lng: wildlandFireIncident.properties.lng,
-                name: wildlandFireIncident.properties.name,
-                perimeterId: wildlandFireIncident.perimeterId,
-                distance: wildlandFireIncident.properties.incidentSize ?? 0,
-              };
+              await sendPushNotification(wildlandFireIncident, changeType);
 
-              if (changeType === 'ADDED') {
-                await applePushNotifications.sendPushNotifications(
-                  `Incident ${incidentInfo.name} added.`,
-                  incidentInfo,
-                );
-              }
-              else if (changeType === 'UPDATED') {
-                await applePushNotifications.sendPushNotifications(
-                  `Incident ${incidentInfo.name} updated.`,
-                  incidentInfo,
-                );
-              }
-
-              activeIncidents.delete(incident.attributes.GlobalID);   
+              activeIncidents.delete(incident.attributes.GlobalID);
             }
           }));
 
