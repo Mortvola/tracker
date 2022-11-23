@@ -107,6 +107,7 @@ type INCIDENT_CHANGE_TYPE = 'NONE' | 'UPDATED' | 'ADDED'
 export const sendPushNotification = async (
   wildlandFireIncident: WildlandFire2,
   changeType: INCIDENT_CHANGE_TYPE,
+  changes: string[],
 ) => {
   const incidentInfo: Incident = {
     globalId: wildlandFireIncident.globalId,
@@ -134,11 +135,17 @@ export const sendPushNotification = async (
     );
   }
   else if (changeType === 'UPDATED') {
+    const listChanges = (): string => (
+      changes.reduce((prevValue, currentValue) => (
+        `${prevValue}\n - ${currentValue}`
+      ), '')
+    );
+
     await applePushNotifications.sendPushNotifications(
       incidentInfo.incidentTypeCategory === 'WF'
         ? 'Update to Wild Fire'
         : 'Update to Prescribed Fire',
-      `The "${incidentInfo.name}" incident has been updated.`,
+      `The "${incidentInfo.name}" incident has changed:${listChanges()}`,
       incidentInfo,
       wildlandFireIncident.globalId,
     );
@@ -238,8 +245,9 @@ export default class UpdateIncidents implements JobContract {
     trail: Trail,
     date: string,
     trx: TransactionClientContract,
-  ): Promise<[INCIDENT_CHANGE_TYPE, WildlandFire2 | null]> {
+  ): Promise<[INCIDENT_CHANGE_TYPE, WildlandFire2 | null, string[]]> {
     const { attributes } = feature;
+    const changes: string[] = [];
 
     // Logger.info(`Started processing feature ${attributes.IncidentName}`);
 
@@ -303,22 +311,19 @@ export default class UpdateIncidents implements JobContract {
       ) {
         if (prevIncident) {
           if (prevIncident.properties.name !== attributes.IncidentName) {
-            Logger.info('names are different', prevIncident.id, prevIncident.properties.name, attributes.IncidentName);
+            changes.push(`Name changed from ${prevIncident.properties.name} to ${attributes.IncidentName}`);
           }
           if (!prevIncident.properties.discoveredAt.equals(discoveredAt)) {
-            Logger.info('discoveredAt are different', prevIncident.id, prevIncident.properties.discoveredAt, discoveredAt);
+            changes.push(`Discovery time changed from ${prevIncident.properties.discoveredAt} to ${discoveredAt}`);
           }
-          // if (!prevIncident.properties.modifiedAt.equals(modifiedAt)) {
-          //   Logger.info('modifiedAt are different', prevIncident.id, prevIncident.properties.modifiedAt, modifiedAt);
-          // }
           if (prevIncident.properties.incidentTypeCategory !== attributes.IncidentTypeCategory) {
-            Logger.info('incidentTypeCategory are different', prevIncident.id, prevIncident.properties.incidentTypeCategory, attributes.IncidentTypeCategory);
+            changes.push(`Type category changed from ${prevIncident.properties.incidentTypeCategory} to ${attributes.IncidentTypeCategory}`);
           }
           if (prevIncident.properties.incidentSize !== attributes.DailyAcres) {
-            Logger.info('incidentSize are different', prevIncident.id, prevIncident.properties.incidentSize, attributes.DailyAcres);
+            changes.push(`Size changed from ${prevIncident.properties.incidentSize} to ${attributes.DailyAcres}`);
           }
           if (prevIncident.properties.percentContained !== attributes.PercentContained) {
-            Logger.info('percentContained are different', prevIncident.id, prevIncident.properties.percentContained, attributes.PercentContained);
+            changes.push(`Percent contained changed from ${prevIncident.properties.percentContained} to ${attributes.PercentContained}`);
           }
           if (
             (prevIncident.properties.containmentDateTime === null
@@ -331,20 +336,21 @@ export default class UpdateIncidents implements JobContract {
               && prevIncident.properties.containmentDateTime.equals(containmentDateTime)
             )
           ) {
-            Logger.info('containmentDateTime are different', prevIncident.id, prevIncident.properties.containmentDateTime, containmentDateTime);
+            changes.push(`Containment date changed from ${prevIncident.properties.containmentDateTime} to ${containmentDateTime}`);
           }
-          if (prevIncident.properties.lat !== coordinates.y) {
-            Logger.info('lat are different', prevIncident.id, prevIncident.properties.lat, coordinates.y);
-          }
-          if (prevIncident.properties.lng !== coordinates.x) {
-            Logger.info('lng are different', prevIncident.id, prevIncident.properties.lng, coordinates.x);
+          if (prevIncident.properties.lat !== coordinates.y
+            || prevIncident.properties.lng !== coordinates.x
+          ) {
+            changes.push(`Point of origin changed from (${prevIncident.properties.lat}, ${prevIncident.properties.lng}) to (${coordinates.y}, ${coordinates.x})`);
           }
           if (prevIncident.properties.distance !== shortestDistance) {
-            Logger.info('distance are different', prevIncident.id, prevIncident.properties.distance, shortestDistance);
+            changes.push(`Distance to trail changed from ${prevIncident.properties.distance} to ${shortestDistance}`);
           }
           if (prevIncident.perimeterId !== perimeterId) {
-            Logger.info('perimeterId are different', prevIncident.id, prevIncident.perimeterId, perimeterId);
+            changes.push('Perimeter changed');
           }
+
+          Logger.info('Changes', changes);
         }
 
         const newIncident = new WildlandFire2().useTransaction(trx);
@@ -379,16 +385,16 @@ export default class UpdateIncidents implements JobContract {
 
           await prevIncident.save();
 
-          return ['UPDATED', newIncident];
+          return ['UPDATED', newIncident, changes];
         }
 
-        return ['ADDED', newIncident];
+        return ['ADDED', newIncident, changes];
       }
     }
 
     // Logger.info(`Finished processing feature ${attributes.IncidentName}`);
 
-    return ['NONE', null];
+    return ['NONE', null, changes];
   }
 
   private static async getIncidents(): Promise<NifcIncident[]> {
@@ -457,10 +463,11 @@ export default class UpdateIncidents implements JobContract {
             const [
               changeType,
               wildlandFireIncident,
+              changes,
             ] = await UpdateIncidents.processIncident(incident, trail, date, trx);
 
             if (wildlandFireIncident !== null) {
-              await sendPushNotification(wildlandFireIncident, changeType);
+              await sendPushNotification(wildlandFireIncident, changeType, changes);
 
               activeIncidents.delete(incident.attributes.GlobalID);
             }

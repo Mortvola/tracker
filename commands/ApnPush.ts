@@ -42,6 +42,6 @@ export default class ApnPush extends BaseCommand {
       .where('globalId', this.globalId).orderBy('updatedAt', 'desc')
       .firstOrFail();
 
-    await sendPushNotification(incident, this.update ? 'UPDATED' : 'ADDED');
+    await sendPushNotification(incident, this.update ? 'UPDATED' : 'ADDED', []);
   }
 }
