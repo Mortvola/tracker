@@ -152,6 +152,60 @@ export const sendPushNotification = async (
   }
 };
 
+export const getChanges = (incident: WildlandFire2, prevIncident: WildlandFire2): string[] => {
+  const changes: string[] = [];
+
+  if (prevIncident.properties.name !== incident.properties.name) {
+    changes.push(`Name changed from ${prevIncident.properties.name} to ${incident.properties.name}`);
+  }
+
+  if (!prevIncident.properties.discoveredAt.equals(incident.properties.discoveredAt)) {
+    changes.push(`Discovery time changed from ${prevIncident.properties.discoveredAt} to ${incident.properties.discoveredAt}`);
+  }
+
+  if (prevIncident.properties.incidentTypeCategory !== incident.properties.incidentTypeCategory) {
+    changes.push(`Type category changed from ${prevIncident.properties.incidentTypeCategory} to ${incident.properties.incidentTypeCategory}`);
+  }
+
+  if (prevIncident.properties.incidentSize !== incident.properties.incidentSize) {
+    changes.push(`Size changed from ${prevIncident.properties.incidentSize} to ${incident.properties.incidentSize}`);
+  }
+
+  if (prevIncident.properties.percentContained !== incident.properties.percentContained) {
+    changes.push(`Percent contained changed from ${prevIncident.properties.percentContained} to ${incident.properties.percentContained}`);
+  }
+
+  if (
+    (prevIncident.properties.containmentDateTime === null
+      && incident.properties.containmentDateTime !== null)
+    || (prevIncident.properties.containmentDateTime !== null
+      && incident.properties.containmentDateTime === null)
+    || (
+      prevIncident.properties.containmentDateTime !== null
+      && incident.properties.containmentDateTime !== null
+      && prevIncident.properties.containmentDateTime.equals(incident.properties.containmentDateTime)
+    )
+  ) {
+    changes.push(`Containment date changed from ${prevIncident.properties.containmentDateTime} to ${incident.properties.containmentDateTime}`);
+  }
+
+  if (prevIncident.properties.lat !== incident.properties.lat
+    || prevIncident.properties.lng !== incident.properties.lng
+  ) {
+    changes.push(`Point of origin changed from (${prevIncident.properties.lat}, ${prevIncident.properties.lng}) to (${incident.properties.lat}, ${incident.properties.lng})`);
+  }
+
+  if (prevIncident.properties.distance !== incident.properties.distance) {
+    changes.push(`Distance to trail changed from ${prevIncident.properties.distance} to ${incident.properties.distance}`);
+  }
+
+  if (prevIncident.perimeterId !== incident.perimeterId) {
+    changes.push('Perimeter changed');
+  }
+
+  return changes;
+};
+
 export default class UpdateIncidents implements JobContract {
   public key = 'UpdateIncidents';
 
@@ -247,7 +301,7 @@ export default class UpdateIncidents implements JobContract {
     trx: TransactionClientContract,
   ): Promise<[INCIDENT_CHANGE_TYPE, WildlandFire2 | null, string[]]> {
     const { attributes } = feature;
-    const changes: string[] = [];
+    let changes: string[] = [];
 
     // Logger.info(`Started processing feature ${attributes.IncidentName}`);
 
@@ -283,112 +337,48 @@ export default class UpdateIncidents implements JobContract {
         ? DateTime.fromMillis(attributes.ContainmentDateTime)
         : null;
 
-      if (
-        !prevIncident
-        || (
-          prevIncident.properties.name !== attributes.IncidentName
-          || !prevIncident.properties.discoveredAt.equals(discoveredAt)
-          || !prevIncident.properties.modifiedAt.equals(modifiedAt)
-          || prevIncident.properties.incidentTypeCategory !== attributes.IncidentTypeCategory
-          || prevIncident.properties.incidentSize !== attributes.DailyAcres
-          || prevIncident.properties.percentContained !== attributes.PercentContained
-          || (
-            (prevIncident.properties.containmentDateTime === null
-              && containmentDateTime !== null)
-            || (prevIncident.properties.containmentDateTime !== null
-              && containmentDateTime === null)
-            || (
-              prevIncident.properties.containmentDateTime !== null
-              && containmentDateTime !== null
-              && prevIncident.properties.containmentDateTime.equals(containmentDateTime)
-            )
-          )
-          || prevIncident.properties.lat !== coordinates.y
-          || prevIncident.properties.lng !== coordinates.x
-          || prevIncident.properties.distance !== shortestDistance
-          || prevIncident.perimeterId !== perimeterId
-        )
-      ) {
-        if (prevIncident) {
-          if (prevIncident.properties.name !== attributes.IncidentName) {
-            changes.push(`Name changed from ${prevIncident.properties.name} to ${attributes.IncidentName}`);
-          }
-          if (!prevIncident.properties.discoveredAt.equals(discoveredAt)) {
-            changes.push(`Discovery time changed from ${prevIncident.properties.discoveredAt} to ${discoveredAt}`);
-          }
-          if (prevIncident.properties.incidentTypeCategory !== attributes.IncidentTypeCategory) {
-            changes.push(`Type category changed from ${prevIncident.properties.incidentTypeCategory} to ${attributes.IncidentTypeCategory}`);
-          }
-          if (prevIncident.properties.incidentSize !== attributes.DailyAcres) {
-            changes.push(`Size changed from ${prevIncident.properties.incidentSize} to ${attributes.DailyAcres}`);
-          }
-          if (prevIncident.properties.percentContained !== attributes.PercentContained) {
-            changes.push(`Percent contained changed from ${prevIncident.properties.percentContained} to ${attributes.PercentContained}`);
-          }
-          if (
-            (prevIncident.properties.containmentDateTime === null
-              && containmentDateTime !== null)
-            || (prevIncident.properties.containmentDateTime !== null
-              && containmentDateTime === null)
-            || (
-              prevIncident.properties.containmentDateTime !== null
-              && containmentDateTime !== null
-              && prevIncident.properties.containmentDateTime.equals(containmentDateTime)
-            )
-          ) {
-            changes.push(`Containment date changed from ${prevIncident.properties.containmentDateTime} to ${containmentDateTime}`);
-          }
-          if (prevIncident.properties.lat !== coordinates.y
-            || prevIncident.properties.lng !== coordinates.x
-          ) {
-            changes.push(`Point of origin changed from (${prevIncident.properties.lat}, ${prevIncident.properties.lng}) to (${coordinates.y}, ${coordinates.x})`);
-          }
-          if (prevIncident.properties.distance !== shortestDistance) {
-            changes.push(`Distance to trail changed from ${prevIncident.properties.distance} to ${shortestDistance}`);
-          }
-          if (prevIncident.perimeterId !== perimeterId) {
-            changes.push('Perimeter changed');
-          }
+      const newIncident = new WildlandFire2().useTransaction(trx);
 
-          Logger.info('Changes', changes);
-        }
+      newIncident.fill({
+        globalId: attributes.GlobalID,
+        irwinId: attributes.IrwinID,
+        properties: {
+          name: attributes.IncidentName,
+          discoveredAt,
+          modifiedAt,
+          incidentTypeCategory: attributes.IncidentTypeCategory,
+          incidentSize: attributes.DailyAcres,
+          percentContained: attributes.PercentContained,
+          containmentDateTime,
+          lat: coordinates.y,
+          lng: coordinates.x,
+          distance: shortestDistance,
+        },
+        perimeterId,
+        startTimestamp: DateTime.fromISO(date),
+      });
 
-        const newIncident = new WildlandFire2().useTransaction(trx);
+      // If there was a previous version of the incident then set
+      // the end date to be that of the start date of the new version.
+      if (!prevIncident) {
+        await newIncident.save();
 
-        newIncident.fill({
-          globalId: attributes.GlobalID,
-          irwinId: attributes.IrwinID,
-          properties: {
-            name: attributes.IncidentName,
-            discoveredAt,
-            modifiedAt,
-            incidentTypeCategory: attributes.IncidentTypeCategory,
-            incidentSize: attributes.DailyAcres,
-            percentContained: attributes.PercentContained,
-            containmentDateTime,
-            lat: coordinates.y,
-            lng: coordinates.x,
-            distance: shortestDistance,
-          },
-          perimeterId,
-          startTimestamp: DateTime.fromISO(date),
+        return ['ADDED', newIncident, changes];
+      }
+
+      changes = getChanges(newIncident, prevIncident);
+      Logger.info('Changes', changes);
+
+      if (changes.length > 0) {
+        prevIncident.merge({
+          endTimestamp: DateTime.fromISO(date),
         });
 
         await newIncident.save();
 
-        // If there was a previous version of the incident then set
-        // the end date to be that of the start date of the new version.
-        if (prevIncident) {
-          prevIncident.merge({
-            endTimestamp: DateTime.fromISO(date),
-          });
+        await prevIncident.save();
 
-          await prevIncident.save();
-
-          return ['UPDATED', newIncident, changes];
-        }
-
-        return ['ADDED', newIncident, changes];
+        return ['UPDATED', newIncident, changes];
       }
     }
 

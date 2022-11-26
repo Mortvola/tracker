@@ -71,14 +71,15 @@ class ApplePushNotifications {
           Logger.info(`apns success, device token: ${deviceToken.token}, apns id: ${response.headers.get('apns-id')}`);
         }
         else {
-          const body = await response.json();
+          const b2 = await response.json();
 
-          if (response.status === 400 && body.reason === 'BadDeviceToken') {
+          if ((response.status === 400 && b2.reason === 'BadDeviceToken')
+            || (response.status === 410 && b2.reason === 'Unregistered')) {
             // Remove the bad device token
             await deviceToken.delete();
           }
 
-          Logger.error(`apns failure: ${response.status}: ${response.statusText}, body: ${JSON.stringify(body)}`);
+          Logger.error(`apns failure: ${response.status}: ${response.statusText}, body: ${JSON.stringify(b2)}`);
         }
       }
       catch (error) {
