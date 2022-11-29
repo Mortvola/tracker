@@ -175,7 +175,7 @@ export default class FixPerimeters extends BaseCommand {
       console.log(`Checking end timestamp on ${unfinished.length} records`);
 
       for (const u of unfinished) {
-        u.endTimestamp = await finishDateTime(u.globalId);
+        u.endTimestamp = await finishDateTime(u);
 
         await u.save();
       }

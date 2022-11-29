@@ -30,6 +30,10 @@ const currentWildFireLocationsUrl = () => (
   `${baseUrl}/Current_WildlandFire_Locations/FeatureServer/0/query?where=1%3D1&outFields=IrwinID,DailyAcres,IncidentName,ModifiedOnDateTime_dt,FireDiscoveryDateTime,PercentContained,IncidentTypeCategory,GlobalID&outSR=4326&f=json`
 );
 
+const historicalWildlandFireLocationsUrl = (globalId: string) => (
+  `${baseUrl}/Fire_History_Locations_Public/FeatureServer/0/query?where=GlobalID%20%3D%20'{${globalId}}'&outFields=ContainmentDateTime,ControlDateTime,FireOutDateTime,ModifiedOnDateTime_dt,DailyAcres&outSR=4326&f=json`
+);
+
 const maxDistanceToTrail = 1609.34 * 10; // 10 miles in meters
 
 type NifcIncident = {
@@ -47,11 +51,9 @@ type NifcIncident = {
   geometry: { x: number, y: number },
 }
 
-export const finishDateTime = async (globalId: string) => {
+export const finishDateTime = async (incident: WildlandFire2): Promise<DateTime | null> => {
   try {
-    const response = await fetch(
-      `${baseUrl}/Fire_History_Locations_Public/FeatureServer/0/query?where=GlobalID%20%3D%20'{${globalId}}'&outFields=ContainmentDateTime,ControlDateTime,FireOutDateTime,ModifiedOnDateTime_dt,DailyAcres&outSR=4326&f=json`,
-    );
+    const response = await fetch(historicalWildlandFireLocationsUrl(incident.globalId));
 
     if (response.ok) {
       const body = await response.json();
@@ -93,6 +95,11 @@ export const finishDateTime = async (globalId: string) => {
 
         return null;
       }
+
+      // Incident was not found. The incident may have been deleted from the database.
+      // Return the last modified time.
+      // Todo: Mark these incidents as deleted instead.
+      return incident.properties.modifiedAt;
     }
   }
   catch (error) {
@@ -310,6 +317,7 @@ export default class UpdateIncidents implements JobContract {
       .query({ client: trx })
       .where('globalId', attributes.GlobalID)
       .orderBy('startTimestamp', 'desc')
+      .orderBy('id', 'desc') // tie breaker in case startTimestamp values are the same
       .first();
 
     // eslint-disable-next-line prefer-const
@@ -424,7 +432,7 @@ export default class UpdateIncidents implements JobContract {
   }
 
   private static async updateEndTimestamp(incident: WildlandFire2): Promise<void> {
-    incident.endTimestamp = await finishDateTime(incident.globalId);
+    incident.endTimestamp = await finishDateTime(incident);
 
     // if (incident.endTimestamp === null) {
     //   incident.endTimestamp = DateTime.now();
