@@ -1,4 +1,5 @@
-import { args, BaseCommand, flags } from '@adonisjs/core/build/standalone';
+import { BaseCommand, flags } from '@adonisjs/core/build/standalone';
+import applePushNotifications from '@ioc:ApplePushNotifications';
 import { getChanges, sendPushNotification } from 'App/Jobs/UpdateIncidents';
 import WildlandFire2 from 'App/Models/WildlandFire2';
 
@@ -13,7 +14,7 @@ export default class ApnPush extends BaseCommand {
    */
   public static description = '';
 
-  @args.string({ description: 'The global ID of the incident' })
+  @flags.string({ alias: 'i', description: 'The global ID of the incident' })
   public globalId: string;
 
   @flags.boolean({ alias: 'u', description: 'Indicates the notification is an update' })
@@ -39,28 +40,33 @@ export default class ApnPush extends BaseCommand {
   public async run() {
     let changes: string[] = [];
 
-    const incident = await WildlandFire2
-      .query()
-      .where('globalId', this.globalId).orderBy('updatedAt', 'desc')
-      .firstOrFail();
-
-    if (this.update) {
-      const prevIncident = await WildlandFire2
+    if (this.globalId) {
+      const incident = await WildlandFire2
         .query()
         .where('globalId', this.globalId).orderBy('updatedAt', 'desc')
-        .andWhere('id', '!=', incident.id)
-        .first();
+        .firstOrFail();
 
-      if (prevIncident) {
-        changes = getChanges(incident, prevIncident);
+      if (this.update) {
+        const prevIncident = await WildlandFire2
+          .query()
+          .where('globalId', this.globalId).orderBy('updatedAt', 'desc')
+          .andWhere('id', '!=', incident.id)
+          .first();
 
-        console.log(JSON.stringify(changes));
+        if (prevIncident) {
+          changes = getChanges(incident, prevIncident);
+
+          console.log(JSON.stringify(changes));
+        }
+        else {
+          console.log('previous incident not found.');
+        }
       }
-      else {
-        console.log('previous incident not found.');
-      }
+
+      await sendPushNotification(incident, this.update ? 'UPDATED' : 'ADDED', changes);
     }
-
-    await sendPushNotification(incident, this.update ? 'UPDATED' : 'ADDED', changes);
+    else {
+      await applePushNotifications.sendBackgroundPushNotifications();
+    }
   }
 }
